@@ -1,0 +1,17 @@
+# Environment secrets — never commit
+.env
+
+# Compiled binary
+/bin/
+inventory-api
+
+# OS / editor junk
+.DS_Store
+.idea/
+.vscode/
+
+# Go test/coverage output
+*.out
+
+# Internal notes — not part of the project
+prompt.txt
