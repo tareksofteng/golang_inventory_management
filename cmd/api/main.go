@@ -70,10 +70,15 @@ func main() {
 	supplierService := services.NewSupplierService(supplierRepo)
 	supplierController := controllers.NewSupplierController(supplierService)
 
+	productRepo := repositories.NewProductRepository(db)
+	productService := services.NewProductService(productRepo, categoryRepo, supplierRepo)
+	productController := controllers.NewProductController(productService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Category: categoryController,
 		Supplier: supplierController,
+		Product:  productController,
 	})
 
 	// 9. Start the server. router.Run blocks forever (until the process is

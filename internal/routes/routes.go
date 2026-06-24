@@ -12,7 +12,8 @@ import (
 type Controllers struct {
 	Category *controllers.CategoryController
 	Supplier *controllers.SupplierController
-	// Product, StockIn, Dashboard added in later phases.
+	Product  *controllers.ProductController
+	// StockIn, Dashboard added in later phases.
 }
 
 // Register mounts all API routes under a versioned /api/v1 prefix. Versioning
@@ -23,6 +24,7 @@ func Register(router *gin.Engine, c Controllers) {
 
 	registerCategoryRoutes(api, c.Category)
 	registerSupplierRoutes(api, c.Supplier)
+	registerProductRoutes(api, c.Product)
 }
 
 // registerCategoryRoutes wires the 5 RESTful category endpoints. Each module
@@ -47,5 +49,17 @@ func registerSupplierRoutes(rg *gin.RouterGroup, ctrl *controllers.SupplierContr
 		g.GET("/:id", ctrl.Get)       // GET    /api/v1/suppliers/:id
 		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/suppliers/:id
 		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/suppliers/:id
+	}
+}
+
+// registerProductRoutes wires the 5 RESTful product endpoints.
+func registerProductRoutes(rg *gin.RouterGroup, ctrl *controllers.ProductController) {
+	g := rg.Group("/products")
+	{
+		g.POST("", ctrl.Create)       // POST   /api/v1/products
+		g.GET("", ctrl.List)          // GET    /api/v1/products
+		g.GET("/:id", ctrl.Get)       // GET    /api/v1/products/:id
+		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/products/:id
+		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/products/:id
 	}
 }
