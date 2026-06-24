@@ -27,7 +27,7 @@ type Product struct {
 
 	Quantity int    `gorm:"not null;default:0" json:"quantity"` // current stock on hand
 	Unit     string `gorm:"type:varchar(20)" json:"unit"`       // pcs, kg, litre...
-	IsActive bool   `gorm:"not null" json:"is_active"` // defaulted in controller, not via GORM (false zero-value gotcha)
+	IsActive bool   `gorm:"not null" json:"is_active"`          // defaulted in controller, not via GORM (false zero-value gotcha)
 
 	// Associations. Pointers + omitempty so they vanish from the JSON when not
 	// preloaded, instead of showing an empty {} object.

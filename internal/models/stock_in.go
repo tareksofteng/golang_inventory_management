@@ -17,7 +17,7 @@ type StockIn struct {
 
 	Quantity int     `gorm:"not null" json:"quantity"`                               // units received (must be > 0)
 	UnitCost float64 `gorm:"type:decimal(12,2);not null;default:0" json:"unit_cost"` // buying price per unit at this receipt
-	Note     string  `gorm:"type:varchar(255)" json:"note"`                         // optional remark / invoice ref
+	Note     string  `gorm:"type:varchar(255)" json:"note"`                          // optional remark / invoice ref
 
 	// Associations — populated only when preloaded.
 	Product  *Product  `gorm:"foreignKey:ProductID" json:"product,omitempty"`

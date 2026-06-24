@@ -66,9 +66,14 @@ func main() {
 	categoryService := services.NewCategoryService(categoryRepo)
 	categoryController := controllers.NewCategoryController(categoryService)
 
+	supplierRepo := repositories.NewSupplierRepository(db)
+	supplierService := services.NewSupplierService(supplierRepo)
+	supplierController := controllers.NewSupplierController(supplierService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Category: categoryController,
+		Supplier: supplierController,
 	})
 
 	// 9. Start the server. router.Run blocks forever (until the process is

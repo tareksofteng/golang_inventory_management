@@ -11,7 +11,8 @@ import (
 // this struct after wiring the dependency graph.
 type Controllers struct {
 	Category *controllers.CategoryController
-	// Supplier, Product, StockIn, Dashboard added in later phases.
+	Supplier *controllers.SupplierController
+	// Product, StockIn, Dashboard added in later phases.
 }
 
 // Register mounts all API routes under a versioned /api/v1 prefix. Versioning
@@ -21,6 +22,7 @@ func Register(router *gin.Engine, c Controllers) {
 	api := router.Group("/api/v1")
 
 	registerCategoryRoutes(api, c.Category)
+	registerSupplierRoutes(api, c.Supplier)
 }
 
 // registerCategoryRoutes wires the 5 RESTful category endpoints. Each module
@@ -33,5 +35,17 @@ func registerCategoryRoutes(rg *gin.RouterGroup, ctrl *controllers.CategoryContr
 		g.GET("/:id", ctrl.Get)       // GET    /api/v1/categories/:id
 		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/categories/:id
 		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/categories/:id
+	}
+}
+
+// registerSupplierRoutes wires the 5 RESTful supplier endpoints.
+func registerSupplierRoutes(rg *gin.RouterGroup, ctrl *controllers.SupplierController) {
+	g := rg.Group("/suppliers")
+	{
+		g.POST("", ctrl.Create)       // POST   /api/v1/suppliers
+		g.GET("", ctrl.List)          // GET    /api/v1/suppliers
+		g.GET("/:id", ctrl.Get)       // GET    /api/v1/suppliers/:id
+		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/suppliers/:id
+		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/suppliers/:id
 	}
 }
