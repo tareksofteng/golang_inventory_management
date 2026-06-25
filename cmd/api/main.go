@@ -5,6 +5,7 @@ import (
 
 	"inventory-api/config"
 	"inventory-api/internal/controllers"
+	"inventory-api/internal/middleware"
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
 	"inventory-api/internal/routes"
@@ -55,6 +56,7 @@ func main() {
 	//    middleware (Recovery turns a panic into a 500 instead of crashing
 	//    the whole server — like Laravel's exception handler).
 	router := gin.Default()
+	router.Use(middleware.CORS()) // allow the Vue frontend to call the API
 
 	// 6. A health-check endpoint. Load balancers / uptime monitors hit this
 	//    to confirm the service is alive. We also ping the DB here.
@@ -98,14 +100,19 @@ func main() {
 	customerService := services.NewCustomerService(customerRepo)
 	customerController := controllers.NewCustomerController(customerService)
 
+	dashboardRepo := repositories.NewDashboardRepository(db)
+	dashboardService := services.NewDashboardService(dashboardRepo)
+	dashboardController := controllers.NewDashboardController(dashboardService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
-		Auth:     authController,
-		User:     userController,
-		Category: categoryController,
-		Supplier: supplierController,
-		Product:  productController,
-		Customer: customerController,
+		Auth:      authController,
+		User:      userController,
+		Category:  categoryController,
+		Supplier:  supplierController,
+		Product:   productController,
+		Customer:  customerController,
+		Dashboard: dashboardController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

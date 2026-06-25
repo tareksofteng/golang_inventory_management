@@ -11,12 +11,13 @@ import (
 
 // Controllers bundles every controller the router needs.
 type Controllers struct {
-	Auth     *controllers.AuthController
-	User     *controllers.UserController
-	Category *controllers.CategoryController
-	Supplier *controllers.SupplierController
-	Product  *controllers.ProductController
-	Customer *controllers.CustomerController
+	Auth      *controllers.AuthController
+	User      *controllers.UserController
+	Category  *controllers.CategoryController
+	Supplier  *controllers.SupplierController
+	Product   *controllers.ProductController
+	Customer  *controllers.CustomerController
+	Dashboard *controllers.DashboardController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -38,6 +39,9 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	protected.Use(middleware.Auth(tm))
 
 	protected.GET("/auth/me", c.Auth.Me)
+
+	// Dashboard is visible to every authenticated user (no extra permission).
+	protected.GET("/dashboard/summary", c.Dashboard.Summary)
 
 	registerUserRoutes(protected, c.User)
 	registerCategoryRoutes(protected, c.Category)
