@@ -94,6 +94,10 @@ func main() {
 	productService := services.NewProductService(productRepo, categoryRepo, supplierRepo)
 	productController := controllers.NewProductController(productService)
 
+	customerRepo := repositories.NewCustomerRepository(db)
+	customerService := services.NewCustomerService(customerRepo)
+	customerController := controllers.NewCustomerController(customerService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Auth:     authController,
@@ -101,6 +105,7 @@ func main() {
 		Category: categoryController,
 		Supplier: supplierController,
 		Product:  productController,
+		Customer: customerController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

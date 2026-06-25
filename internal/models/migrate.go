@@ -19,6 +19,7 @@ func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&User{},
 		&RefreshToken{},
+		&Customer{},
 		&Category{},
 		&Supplier{},
 		&Product{},
