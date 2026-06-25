@@ -2,64 +2,93 @@ package routes
 
 import (
 	"inventory-api/internal/controllers"
+	"inventory-api/internal/middleware"
+	"inventory-api/internal/rbac"
+	"inventory-api/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Controllers bundles every controller the router needs. As we add modules we
-// add a field here, instead of growing Register's parameter list. main() builds
-// this struct after wiring the dependency graph.
+// Controllers bundles every controller the router needs.
 type Controllers struct {
+	Auth     *controllers.AuthController
+	User     *controllers.UserController
 	Category *controllers.CategoryController
 	Supplier *controllers.SupplierController
 	Product  *controllers.ProductController
-	// StockIn, Dashboard added in later phases.
 }
 
-// Register mounts all API routes under a versioned /api/v1 prefix. Versioning
-// the API from day one means a future breaking change can ship as /api/v2
-// without disturbing existing clients.
-func Register(router *gin.Engine, c Controllers) {
+// Register mounts all API routes under /api/v1. Auth endpoints are public;
+// everything else sits behind the JWT Auth middleware, and each resource group
+// further requires a specific RBAC permission.
+func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	api := router.Group("/api/v1")
 
-	registerCategoryRoutes(api, c.Category)
-	registerSupplierRoutes(api, c.Supplier)
-	registerProductRoutes(api, c.Product)
+	// ---- Public auth endpoints ----
+	authGroup := api.Group("/auth")
+	{
+		authGroup.POST("/login", c.Auth.Login)
+		authGroup.POST("/refresh", c.Auth.Refresh)
+		authGroup.POST("/logout", c.Auth.Logout)
+	}
+
+	// ---- Protected: requires a valid access token ----
+	protected := api.Group("")
+	protected.Use(middleware.Auth(tm))
+
+	protected.GET("/auth/me", c.Auth.Me)
+
+	registerUserRoutes(protected, c.User)
+	registerCategoryRoutes(protected, c.Category)
+	registerSupplierRoutes(protected, c.Supplier)
+	registerProductRoutes(protected, c.Product)
 }
 
-// registerCategoryRoutes wires the 5 RESTful category endpoints. Each module
-// gets its own small function like this — clean and easy to scan.
+func registerUserRoutes(rg *gin.RouterGroup, ctrl *controllers.UserController) {
+	g := rg.Group("/users")
+	g.Use(middleware.RequirePermission(rbac.PermUserManage))
+	{
+		g.POST("", ctrl.Create)
+		g.GET("", ctrl.List)
+		g.GET("/:id", ctrl.Get)
+		g.PUT("/:id", ctrl.Update)
+		g.PUT("/:id/password", ctrl.ChangePassword)
+		g.PATCH("/:id/disable", ctrl.Disable)
+	}
+}
+
 func registerCategoryRoutes(rg *gin.RouterGroup, ctrl *controllers.CategoryController) {
 	g := rg.Group("/categories")
+	g.Use(middleware.RequirePermission(rbac.PermProductManage))
 	{
-		g.POST("", ctrl.Create)       // POST   /api/v1/categories
-		g.GET("", ctrl.List)          // GET    /api/v1/categories
-		g.GET("/:id", ctrl.Get)       // GET    /api/v1/categories/:id
-		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/categories/:id
-		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/categories/:id
+		g.POST("", ctrl.Create)
+		g.GET("", ctrl.List)
+		g.GET("/:id", ctrl.Get)
+		g.PUT("/:id", ctrl.Update)
+		g.DELETE("/:id", ctrl.Delete)
 	}
 }
 
-// registerSupplierRoutes wires the 5 RESTful supplier endpoints.
 func registerSupplierRoutes(rg *gin.RouterGroup, ctrl *controllers.SupplierController) {
 	g := rg.Group("/suppliers")
+	g.Use(middleware.RequirePermission(rbac.PermProductManage))
 	{
-		g.POST("", ctrl.Create)       // POST   /api/v1/suppliers
-		g.GET("", ctrl.List)          // GET    /api/v1/suppliers
-		g.GET("/:id", ctrl.Get)       // GET    /api/v1/suppliers/:id
-		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/suppliers/:id
-		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/suppliers/:id
+		g.POST("", ctrl.Create)
+		g.GET("", ctrl.List)
+		g.GET("/:id", ctrl.Get)
+		g.PUT("/:id", ctrl.Update)
+		g.DELETE("/:id", ctrl.Delete)
 	}
 }
 
-// registerProductRoutes wires the 5 RESTful product endpoints.
 func registerProductRoutes(rg *gin.RouterGroup, ctrl *controllers.ProductController) {
 	g := rg.Group("/products")
+	g.Use(middleware.RequirePermission(rbac.PermProductManage))
 	{
-		g.POST("", ctrl.Create)       // POST   /api/v1/products
-		g.GET("", ctrl.List)          // GET    /api/v1/products
-		g.GET("/:id", ctrl.Get)       // GET    /api/v1/products/:id
-		g.PUT("/:id", ctrl.Update)    // PUT    /api/v1/products/:id
-		g.DELETE("/:id", ctrl.Delete) // DELETE /api/v1/products/:id
+		g.POST("", ctrl.Create)
+		g.GET("", ctrl.List)
+		g.GET("/:id", ctrl.Get)
+		g.PUT("/:id", ctrl.Update)
+		g.DELETE("/:id", ctrl.Delete)
 	}
 }

@@ -17,6 +17,8 @@ import "gorm.io/gorm"
 // or table. That makes it safe to run on every startup, even in production.
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
+		&User{},
+		&RefreshToken{},
 		&Category{},
 		&Supplier{},
 		&Product{},

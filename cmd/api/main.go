@@ -8,7 +8,9 @@ import (
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
 	"inventory-api/internal/routes"
+	"inventory-api/internal/seeder"
 	"inventory-api/internal/services"
+	"inventory-api/pkg/auth"
 	"inventory-api/pkg/database"
 	"inventory-api/pkg/response"
 
@@ -34,6 +36,11 @@ func main() {
 		log.Fatalf("startup: migration failed: %v", err)
 	}
 	log.Println("startup: migrations applied")
+
+	// 2c. Seed the first super-admin if the users table is empty.
+	if err := seeder.SeedSuperAdmin(db, cfg.Seed); err != nil {
+		log.Fatalf("startup: seeding failed: %v", err)
+	}
 
 	// 3. Configure Gin's mode. Release mode disables debug logs and is the
 	//    production default; development keeps the verbose debug output.
@@ -62,6 +69,19 @@ func main() {
 
 	// 7. Wire the dependency graph: repository -> service -> controller.
 	//    This is manual dependency injection — explicit and easy to follow.
+	tokenManager := auth.NewTokenManager(
+		cfg.JWT.Secret,
+		cfg.JWT.AccessTTLMinutes,
+		cfg.JWT.RefreshTTLHours,
+	)
+
+	userRepo := repositories.NewUserRepository(db)
+	refreshRepo := repositories.NewRefreshTokenRepository(db)
+	userService := services.NewUserService(userRepo, refreshRepo)
+	authService := services.NewAuthService(userRepo, refreshRepo, tokenManager)
+	authController := controllers.NewAuthController(authService, userService)
+	userController := controllers.NewUserController(userService)
+
 	categoryRepo := repositories.NewCategoryRepository(db)
 	categoryService := services.NewCategoryService(categoryRepo)
 	categoryController := controllers.NewCategoryController(categoryService)
@@ -76,10 +96,12 @@ func main() {
 
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
+		Auth:     authController,
+		User:     userController,
 		Category: categoryController,
 		Supplier: supplierController,
 		Product:  productController,
-	})
+	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is
 	//    killed), serving requests on the configured port.

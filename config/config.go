@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +16,22 @@ type Config struct {
 	AppEnv  string
 	AppPort string
 	DB      DBConfig
+	JWT     JWTConfig
+	Seed    SeedConfig
+}
+
+// SeedConfig holds the credentials for the super-admin created on first run.
+type SeedConfig struct {
+	AdminEmail    string
+	AdminPassword string
+}
+
+// JWTConfig holds token signing settings. The secret MUST be overridden in
+// production via env — never ship the default.
+type JWTConfig struct {
+	Secret           string
+	AccessTTLMinutes int
+	RefreshTTLHours  int
 }
 
 // DBConfig holds the database connection settings.
@@ -45,7 +62,26 @@ func Load() *Config {
 			Password: getEnv("DB_PASSWORD", ""),
 			Name:     getEnv("DB_NAME", "inventory_db"),
 		},
+		JWT: JWTConfig{
+			Secret:           getEnv("JWT_SECRET", "change-me-in-production"),
+			AccessTTLMinutes: getEnvInt("JWT_ACCESS_TTL_MIN", 15),
+			RefreshTTLHours:  getEnvInt("JWT_REFRESH_TTL_HOURS", 168), // 7 days
+		},
+		Seed: SeedConfig{
+			AdminEmail:    getEnv("SEED_ADMIN_EMAIL", "admin@inventory.test"),
+			AdminPassword: getEnv("SEED_ADMIN_PASSWORD", "Admin@123"),
+		},
 	}
+}
+
+// getEnvInt is like getEnv but parses an integer, falling back on parse errors.
+func getEnvInt(key string, fallback int) int {
+	if value, ok := os.LookupEnv(key); ok && value != "" {
+		if n, err := strconv.Atoi(value); err == nil {
+			return n
+		}
+	}
+	return fallback
 }
 
 // DSN builds the MySQL connection string GORM expects.
