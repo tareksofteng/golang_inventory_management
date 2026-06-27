@@ -16,6 +16,7 @@ const nav = computed(() =>
     { name: 'Categories', to: '/categories', icon: '🏷️', perm: 'product.manage' },
     { name: 'Suppliers', to: '/suppliers', icon: '🚚', perm: 'product.manage' },
     { name: 'Customers', to: '/customers', icon: '👤', perm: 'sales.manage' },
+    { name: 'Purchases', to: '/purchases', icon: '🧾', perm: 'purchase.manage' },
     { name: 'Users', to: '/users', icon: '🔐', perm: 'user.manage' },
   ].filter((i) => !i.perm || auth.can(i.perm)),
 )
