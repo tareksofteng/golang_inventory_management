@@ -23,6 +23,7 @@ type Controllers struct {
 	Report    *controllers.ReportController
 	Payment   *controllers.PaymentController
 	Return    *controllers.ReturnController
+	Ledger    *controllers.LedgerController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -58,6 +59,16 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	registerReportRoutes(protected, c.Report)
 	registerPaymentRoutes(protected, c.Payment)
 	registerReturnRoutes(protected, c.Return)
+	registerLedgerRoutes(protected, c.Ledger)
+}
+
+func registerLedgerRoutes(rg *gin.RouterGroup, ctrl *controllers.LedgerController) {
+	g := rg.Group("/ledger")
+	g.Use(middleware.RequirePermission(rbac.PermReportAccess))
+	{
+		g.GET("/customer/:id", ctrl.Customer)
+		g.GET("/supplier/:id", ctrl.Supplier)
+	}
 }
 
 func registerReturnRoutes(rg *gin.RouterGroup, ctrl *controllers.ReturnController) {

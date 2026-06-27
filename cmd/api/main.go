@@ -139,6 +139,10 @@ func main() {
 	returnService := services.NewReturnService(returnRepo, supplierRepo, customerRepo, productRepo)
 	returnController := controllers.NewReturnController(returnService)
 
+	ledgerRepo := repositories.NewLedgerRepository(db)
+	ledgerService := services.NewLedgerService(ledgerRepo, customerRepo, supplierRepo)
+	ledgerController := controllers.NewLedgerController(ledgerService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Auth:      authController,
@@ -153,6 +157,7 @@ func main() {
 		Report:    reportController,
 		Payment:   paymentController,
 		Return:    returnController,
+		Ledger:    ledgerController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

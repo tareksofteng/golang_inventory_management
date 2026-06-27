@@ -538,6 +538,58 @@ paths:
       summary: Dashboard summary (KPIs, finance, low stock, top products, trend)
       tags:
       - Dashboard
+  /ledger/customer/{id}:
+    get:
+      parameters:
+      - description: Customer ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Customer ledger — full statement with running balance
+      tags:
+      - Ledger
+  /ledger/supplier/{id}:
+    get:
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Supplier ledger — full statement with running balance
+      tags:
+      - Ledger
   /payments:
     get:
       parameters:
