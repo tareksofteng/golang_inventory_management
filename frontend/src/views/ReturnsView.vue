@@ -1,14 +1,32 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../lib/api'
 import Modal from '../components/Modal.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
-// Which history we are viewing: 'purchase' | 'sale'
-const view = ref(auth.can('purchase.manage') ? 'purchase' : 'sale')
+// Which history we are viewing: 'purchase' | 'sale'. A ?tab= query (set by the
+// sidebar "Purchase Returns" / "Sales Returns" links) chooses the initial tab.
+const initialTab = route.query.tab === 'sale' || route.query.tab === 'purchase'
+  ? route.query.tab
+  : auth.can('purchase.manage') ? 'purchase' : 'sale'
+const view = ref(initialTab)
+
+// React when the sidebar link changes the tab while we're already on the page.
+watch(
+  () => route.query.tab,
+  (t) => {
+    if ((t === 'purchase' || t === 'sale') && t !== view.value) {
+      view.value = t
+      page.value = 1
+      load()
+    }
+  },
+)
 const rows = ref([])
 const meta = ref({ page: 1, total: 0, total_pages: 1 })
 const page = ref(1)
