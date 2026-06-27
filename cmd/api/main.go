@@ -112,6 +112,10 @@ func main() {
 	saleService := services.NewSaleService(saleRepo, customerRepo, productRepo)
 	saleController := controllers.NewSaleController(saleService)
 
+	reportRepo := repositories.NewReportRepository(db)
+	reportService := services.NewReportService(reportRepo)
+	reportController := controllers.NewReportController(reportService)
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Auth:      authController,
@@ -123,6 +127,7 @@ func main() {
 		Dashboard: dashboardController,
 		Purchase:  purchaseController,
 		Sale:      saleController,
+		Report:    reportController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is
