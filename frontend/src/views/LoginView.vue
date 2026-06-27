@@ -18,7 +18,13 @@ async function submit() {
     await auth.login(email.value, password.value)
     router.push('/dashboard')
   } catch (e) {
-    error.value = e.response?.data?.message || 'Login failed'
+    // No e.response means the request never reached the API (backend down /
+    // wrong URL), which is the most common cause of a confusing failure.
+    if (!e.response) {
+      error.value = 'Cannot reach the server. Is the backend running on port 9000? (make run)'
+    } else {
+      error.value = e.response.data?.message || 'Login failed'
+    }
   } finally {
     loading.value = false
   }
