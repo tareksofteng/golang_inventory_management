@@ -47,7 +47,15 @@ func NewCategoryController(service services.CategoryService) *CategoryController
 	return &CategoryController{service: service}
 }
 
-// Create handles POST /categories
+// Create godoc
+// @Summary  Create a category
+// @Tags     Categories
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateCategoryRequest  true  "Category"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /categories [post]
 func (ctrl *CategoryController) Create(c *gin.Context) {
 	var req CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,7 +85,16 @@ func (ctrl *CategoryController) Create(c *gin.Context) {
 	response.Created(c, "Category created successfully", created)
 }
 
-// List handles GET /categories?page=&per_page=&search=
+// List godoc
+// @Summary  List categories (paginated, searchable)
+// @Tags     Categories
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by name"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /categories [get]
 func (ctrl *CategoryController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 

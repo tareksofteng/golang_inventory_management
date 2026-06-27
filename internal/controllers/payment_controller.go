@@ -34,6 +34,15 @@ func NewPaymentController(service services.PaymentService) *PaymentController {
 	return &PaymentController{service: service}
 }
 
+// PayCustomer godoc
+// @Summary  Receive a payment from a customer (reduces customer due)
+// @Tags     Payments
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CustomerPaymentRequest  true  "Payment"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /payments/customer [post]
 func (ctrl *PaymentController) PayCustomer(c *gin.Context) {
 	var req CustomerPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,6 +58,15 @@ func (ctrl *PaymentController) PayCustomer(c *gin.Context) {
 	response.Created(c, "Customer payment received", payment)
 }
 
+// PaySupplier godoc
+// @Summary  Pay a supplier (reduces supplier due)
+// @Tags     Payments
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      SupplierPaymentRequest  true  "Payment"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /payments/supplier [post]
 func (ctrl *PaymentController) PaySupplier(c *gin.Context) {
 	var req SupplierPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,6 +95,16 @@ func (ctrl *PaymentController) handleWriteError(c *gin.Context, err, notFound er
 	}
 }
 
+// List godoc
+// @Summary  Payment history (optionally filter by party type)
+// @Tags     Payments
+// @Produce  json
+// @Security BearerAuth
+// @Param    type      query     string  false  "Filter: customer | supplier"
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /payments [get]
 func (ctrl *PaymentController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 	partyType := c.Query("type") // optional: customer | supplier

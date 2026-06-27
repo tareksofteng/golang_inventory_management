@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"inventory-api/config"
+	_ "inventory-api/docs" // generated swagger docs
 	"inventory-api/internal/controllers"
 	"inventory-api/internal/middleware"
 	"inventory-api/internal/models"
@@ -16,8 +17,19 @@ import (
 	"inventory-api/pkg/response"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title           Inventory Management API
+// @version         1.0
+// @description     Production-style inventory + POS REST API built with Gin, GORM and MySQL.
+// @description     Authenticate via POST /auth/login, then click "Authorize" and enter: Bearer &lt;access_token&gt;.
+// @host            localhost:9000
+// @BasePath        /api/v1
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
 func main() {
 	// 1. Load configuration from .env / environment.
 	cfg := config.Load()
@@ -57,6 +69,9 @@ func main() {
 	//    the whole server — like Laravel's exception handler).
 	router := gin.Default()
 	router.Use(middleware.CORS()) // allow the Vue frontend to call the API
+
+	// Swagger UI at /swagger/index.html (interactive API documentation).
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 6. A health-check endpoint. Load balancers / uptime monitors hit this
 	//    to confirm the service is alive. We also ping the DB here.

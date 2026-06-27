@@ -65,6 +65,15 @@ func handleProductWriteError(c *gin.Context, err error, action string) {
 	}
 }
 
+// Create godoc
+// @Summary  Create a product
+// @Tags     Products
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateProductRequest  true  "Product"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /products [post]
 func (ctrl *ProductController) Create(c *gin.Context) {
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -95,6 +104,16 @@ func (ctrl *ProductController) Create(c *gin.Context) {
 	response.Created(c, "Product created successfully", created)
 }
 
+// List godoc
+// @Summary  List products (paginated, searchable)
+// @Tags     Products
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by name or SKU"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /products [get]
 func (ctrl *ProductController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 
@@ -113,6 +132,15 @@ func (ctrl *ProductController) List(c *gin.Context) {
 	response.Paginated(c, "Products fetched successfully", products, meta)
 }
 
+// Get godoc
+// @Summary  Get a product by id
+// @Tags     Products
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Product ID"
+// @Success  200  {object}  map[string]interface{}
+// @Failure  404  {object}  map[string]interface{}
+// @Router   /products/{id} [get]
 func (ctrl *ProductController) Get(c *gin.Context) {
 	id, err := parseIDParam(c)
 	if err != nil {
@@ -132,6 +160,16 @@ func (ctrl *ProductController) Get(c *gin.Context) {
 	response.Success(c, "Product fetched successfully", product)
 }
 
+// Update godoc
+// @Summary  Update a product
+// @Tags     Products
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    id    path      int                   true  "Product ID"
+// @Param    body  body      UpdateProductRequest  true  "Product"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /products/{id} [put]
 func (ctrl *ProductController) Update(c *gin.Context) {
 	id, err := parseIDParam(c)
 	if err != nil {
@@ -167,6 +205,14 @@ func (ctrl *ProductController) Update(c *gin.Context) {
 	response.Success(c, "Product updated successfully", updated)
 }
 
+// Delete godoc
+// @Summary  Delete a product (soft delete)
+// @Tags     Products
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Product ID"
+// @Success  200  {object}  map[string]interface{}
+// @Router   /products/{id} [delete]
 func (ctrl *ProductController) Delete(c *gin.Context) {
 	id, err := parseIDParam(c)
 	if err != nil {

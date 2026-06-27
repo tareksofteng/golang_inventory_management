@@ -50,6 +50,15 @@ func handleUserWriteError(c *gin.Context, err error, action string) {
 	}
 }
 
+// Create godoc
+// @Summary  Create a user (requires user.manage)
+// @Tags     Users
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateUserRequest  true  "User"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /users [post]
 func (ctrl *UserController) Create(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,6 +74,16 @@ func (ctrl *UserController) Create(c *gin.Context) {
 	response.Created(c, "User created successfully", user)
 }
 
+// List godoc
+// @Summary  List users (requires user.manage)
+// @Tags     Users
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by name or email"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /users [get]
 func (ctrl *UserController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 

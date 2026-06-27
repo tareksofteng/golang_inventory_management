@@ -40,6 +40,15 @@ func parseDateRange(c *gin.Context) (time.Time, time.Time) {
 	return from, toExcl
 }
 
+// Sales godoc
+// @Summary  Sales report for a date range
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Param    from  query     string  false  "From date (YYYY-MM-DD)"
+// @Param    to    query     string  false  "To date (YYYY-MM-DD)"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /reports/sales [get]
 func (ctrl *ReportController) Sales(c *gin.Context) {
 	from, to := parseDateRange(c)
 	report, err := ctrl.service.Sales(from, to)
@@ -50,6 +59,15 @@ func (ctrl *ReportController) Sales(c *gin.Context) {
 	response.Success(c, "Sales report", report)
 }
 
+// Purchases godoc
+// @Summary  Purchase report for a date range
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Param    from  query     string  false  "From date (YYYY-MM-DD)"
+// @Param    to    query     string  false  "To date (YYYY-MM-DD)"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /reports/purchases [get]
 func (ctrl *ReportController) Purchases(c *gin.Context) {
 	from, to := parseDateRange(c)
 	report, err := ctrl.service.Purchases(from, to)
@@ -60,6 +78,13 @@ func (ctrl *ReportController) Purchases(c *gin.Context) {
 	response.Success(c, "Purchase report", report)
 }
 
+// CustomerDue godoc
+// @Summary  Customers with outstanding due
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /reports/customer-due [get]
 func (ctrl *ReportController) CustomerDue(c *gin.Context) {
 	report, err := ctrl.service.CustomerDue()
 	if err != nil {
@@ -69,6 +94,13 @@ func (ctrl *ReportController) CustomerDue(c *gin.Context) {
 	response.Success(c, "Customer due report", report)
 }
 
+// SupplierDue godoc
+// @Summary  Suppliers we owe money to
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /reports/supplier-due [get]
 func (ctrl *ReportController) SupplierDue(c *gin.Context) {
 	report, err := ctrl.service.SupplierDue()
 	if err != nil {
@@ -78,6 +110,13 @@ func (ctrl *ReportController) SupplierDue(c *gin.Context) {
 	response.Success(c, "Supplier due report", report)
 }
 
+// Stock godoc
+// @Summary  Current stock report with total stock value
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /reports/stock [get]
 func (ctrl *ReportController) Stock(c *gin.Context) {
 	report, err := ctrl.service.Stock()
 	if err != nil {

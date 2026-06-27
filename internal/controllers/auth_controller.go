@@ -35,7 +35,15 @@ func NewAuthController(authService services.AuthService, userService services.Us
 	return &AuthController{authService: authService, userService: userService}
 }
 
-// Login -> POST /auth/login
+// Login godoc
+// @Summary  Log in and receive access + refresh tokens
+// @Tags     Auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      LoginRequest  true  "Credentials"
+// @Success  200   {object}  map[string]interface{}
+// @Failure  401   {object}  map[string]interface{}
+// @Router   /auth/login [post]
 func (ctrl *AuthController) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,7 +72,15 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	})
 }
 
-// Refresh -> POST /auth/refresh
+// Refresh godoc
+// @Summary  Rotate the refresh token and get a new access token
+// @Tags     Auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      RefreshRequest  true  "Refresh token"
+// @Success  200   {object}  map[string]interface{}
+// @Failure  401   {object}  map[string]interface{}
+// @Router   /auth/refresh [post]
 func (ctrl *AuthController) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -91,7 +107,14 @@ func (ctrl *AuthController) Refresh(c *gin.Context) {
 	})
 }
 
-// Logout -> POST /auth/logout
+// Logout godoc
+// @Summary  Revoke a refresh token (logout)
+// @Tags     Auth
+// @Accept   json
+// @Produce  json
+// @Param    body  body      LogoutRequest  true  "Refresh token"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /auth/logout [post]
 func (ctrl *AuthController) Logout(c *gin.Context) {
 	var req LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -106,8 +129,13 @@ func (ctrl *AuthController) Logout(c *gin.Context) {
 	response.Success(c, "Logged out successfully", nil)
 }
 
-// Me -> GET /auth/me  (protected). Returns the current user + their permissions
-// so the frontend can render the right menus.
+// Me godoc
+// @Summary  Get the current authenticated user + permissions
+// @Tags     Auth
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /auth/me [get]
 func (ctrl *AuthController) Me(c *gin.Context) {
 	user, err := ctrl.userService.Get(middleware.UserID(c))
 	if err != nil {

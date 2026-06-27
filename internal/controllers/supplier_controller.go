@@ -43,7 +43,15 @@ func NewSupplierController(service services.SupplierService) *SupplierController
 	return &SupplierController{service: service}
 }
 
-// Create handles POST /suppliers
+// Create godoc
+// @Summary  Create a supplier
+// @Tags     Suppliers
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateSupplierRequest  true  "Supplier"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /suppliers [post]
 func (ctrl *SupplierController) Create(c *gin.Context) {
 	var req CreateSupplierRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -75,7 +83,16 @@ func (ctrl *SupplierController) Create(c *gin.Context) {
 	response.Created(c, "Supplier created successfully", created)
 }
 
-// List handles GET /suppliers?page=&per_page=&search=
+// List godoc
+// @Summary  List suppliers (paginated, searchable)
+// @Tags     Suppliers
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by name or email"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /suppliers [get]
 func (ctrl *SupplierController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 

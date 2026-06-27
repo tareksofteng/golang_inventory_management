@@ -15,7 +15,13 @@ func NewDashboardController(service services.DashboardService) *DashboardControl
 	return &DashboardController{service: service}
 }
 
-// Summary -> GET /dashboard/summary
+// Summary godoc
+// @Summary  Dashboard summary (KPIs, finance, low stock, top products, trend)
+// @Tags     Dashboard
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /dashboard/summary [get]
 func (ctrl *DashboardController) Summary(c *gin.Context) {
 	summary, err := ctrl.service.Summary()
 	if err != nil {

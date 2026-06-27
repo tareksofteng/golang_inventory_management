@@ -37,6 +37,15 @@ func NewCustomerController(service services.CustomerService) *CustomerController
 	return &CustomerController{service: service}
 }
 
+// Create godoc
+// @Summary  Create a customer
+// @Tags     Customers
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateCustomerRequest  true  "Customer"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /customers [post]
 func (ctrl *CustomerController) Create(c *gin.Context) {
 	var req CreateCustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,6 +73,16 @@ func (ctrl *CustomerController) Create(c *gin.Context) {
 	response.Created(c, "Customer created successfully", created)
 }
 
+// List godoc
+// @Summary  List customers (paginated, searchable)
+// @Tags     Customers
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by name, email or phone"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /customers [get]
 func (ctrl *CustomerController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 

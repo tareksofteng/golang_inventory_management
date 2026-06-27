@@ -24,5 +24,10 @@ fmt:
 vet:
 	go vet ./...
 
+# swagger: regenerate the OpenAPI docs from handler annotations.
+# Requires: go install github.com/swaggo/swag/cmd/swag@latest
+swagger:
+	swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
+
 # .PHONY tells make these are command names, not files to produce.
-.PHONY: run build tidy fmt vet
+.PHONY: run build tidy fmt vet swagger

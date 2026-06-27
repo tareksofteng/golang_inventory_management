@@ -33,6 +33,15 @@ func NewPurchaseController(service services.PurchaseService) *PurchaseController
 	return &PurchaseController{service: service}
 }
 
+// Create godoc
+// @Summary  Create a purchase invoice (increases stock + supplier due, transactional)
+// @Tags     Purchases
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreatePurchaseRequest  true  "Purchase with line items"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /purchases [post]
 func (ctrl *PurchaseController) Create(c *gin.Context) {
 	var req CreatePurchaseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,6 +83,16 @@ func (ctrl *PurchaseController) Create(c *gin.Context) {
 	response.Created(c, "Purchase created successfully", purchase)
 }
 
+// List godoc
+// @Summary  List purchases (paginated)
+// @Tags     Purchases
+// @Produce  json
+// @Security BearerAuth
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by invoice no"
+// @Success  200       {object}  map[string]interface{}
+// @Router   /purchases [get]
 func (ctrl *PurchaseController) List(c *gin.Context) {
 	p := pagination.Parse(c)
 
