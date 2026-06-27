@@ -1,22 +1,25 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../lib/api'
 
+const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
-const tabs = [
-  { key: 'sales', label: 'Sales', endpoint: '/reports/sales', ranged: true },
-  { key: 'purchases', label: 'Purchases', endpoint: '/reports/purchases', ranged: true },
-  { key: 'customer-due', label: 'Customer Due', endpoint: '/reports/customer-due', ranged: false },
-  { key: 'supplier-due', label: 'Supplier Due', endpoint: '/reports/supplier-due', ranged: false },
-  { key: 'stock', label: 'Current Stock', endpoint: '/reports/stock', ranged: false },
-]
+// Each report is its own route: /reports/:type
+const REPORTS = {
+  sales: { label: 'Sales Report', endpoint: '/reports/sales', ranged: true },
+  purchases: { label: 'Purchase Report', endpoint: '/reports/purchases', ranged: true },
+  'customer-due': { label: 'Customer Due Report', endpoint: '/reports/customer-due', ranged: false },
+  'supplier-due': { label: 'Supplier Due Report', endpoint: '/reports/supplier-due', ranged: false },
+  stock: { label: 'Current Stock Report', endpoint: '/reports/stock', ranged: false },
+}
+const type = computed(() => (REPORTS[route.params.type] ? route.params.type : 'sales'))
+const active = computed(() => REPORTS[type.value])
 
-const active = ref(tabs[0])
 const data = ref(null)
 const loading = ref(false)
 
-// Default date range = current month.
 const today = new Date()
 const pad = (n) => String(n).padStart(2, '0')
 const from = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`)
@@ -34,10 +37,7 @@ async function load() {
   }
 }
 
-function selectTab(t) {
-  active.value = t
-  load()
-}
+watch(type, load)
 
 const fmtDate = (d) => new Date(d).toLocaleDateString()
 const printPage = () => window.print()
@@ -48,21 +48,8 @@ onMounted(load)
 <template>
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Reports</h1>
+      <h1 class="text-2xl font-bold">{{ active.label }}</h1>
       <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
-    </div>
-
-    <!-- Tabs -->
-    <div class="mb-4 flex flex-wrap gap-2 print:hidden">
-      <button
-        v-for="t in tabs"
-        :key="t.key"
-        class="btn"
-        :class="active.key === t.key ? 'bg-brand-600 text-white' : 'btn-ghost'"
-        @click="selectTab(t)"
-      >
-        {{ t.label }}
-      </button>
     </div>
 
     <!-- Date range (sales/purchase only) -->
@@ -90,11 +77,11 @@ onMounted(load)
       </div>
 
       <!-- Due / stock totals -->
-      <div v-if="active.key === 'customer-due' || active.key === 'supplier-due'" class="card p-4">
+      <div v-if="type === 'customer-due' || type === 'supplier-due'" class="card p-4">
         <span class="text-sm text-slate-500">Total Outstanding: </span>
         <span class="text-xl font-bold text-amber-600">{{ money(data.total_due) }}</span>
       </div>
-      <div v-if="active.key === 'stock'" class="card p-4">
+      <div v-if="type === 'stock'" class="card p-4">
         <span class="text-sm text-slate-500">Total Stock Value: </span>
         <span class="text-xl font-bold text-brand-600">{{ money(data.total_value) }}</span>
       </div>
@@ -103,7 +90,7 @@ onMounted(load)
       <div class="card overflow-hidden">
         <div class="overflow-x-auto">
           <!-- Sales -->
-          <table v-if="active.key === 'sales'" class="w-full text-left text-sm">
+          <table v-if="type === 'sales'" class="w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
               <tr><th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Customer</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Paid</th><th class="px-4 py-3">Due</th></tr>
             </thead>
@@ -118,7 +105,7 @@ onMounted(load)
           </table>
 
           <!-- Purchases -->
-          <table v-else-if="active.key === 'purchases'" class="w-full text-left text-sm">
+          <table v-else-if="type === 'purchases'" class="w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
               <tr><th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Supplier</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Paid</th><th class="px-4 py-3">Due</th></tr>
             </thead>
@@ -133,21 +120,21 @@ onMounted(load)
           </table>
 
           <!-- Customer / Supplier due -->
-          <table v-else-if="active.key === 'customer-due' || active.key === 'supplier-due'" class="w-full text-left text-sm">
+          <table v-else-if="type === 'customer-due' || type === 'supplier-due'" class="w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
               <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Phone</th><th class="px-4 py-3">Due</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               <tr v-for="row in (data.customers || data.suppliers)" :key="row.id">
                 <td class="px-4 py-3 font-medium">{{ row.name }}</td><td class="px-4 py-3 text-slate-400">{{ row.phone }}</td>
-                <td class="px-4 py-3 text-amber-600 font-semibold">{{ money(row.due) }}</td>
+                <td class="px-4 py-3 font-semibold text-amber-600">{{ money(row.due) }}</td>
               </tr>
               <tr v-if="!(data.customers || data.suppliers || []).length"><td colspan="3" class="px-4 py-8 text-center text-slate-400">No outstanding dues 🎉</td></tr>
             </tbody>
           </table>
 
           <!-- Stock -->
-          <table v-else-if="active.key === 'stock'" class="w-full text-left text-sm">
+          <table v-else-if="type === 'stock'" class="w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
               <tr><th class="px-4 py-3">Product</th><th class="px-4 py-3">SKU</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Qty</th><th class="px-4 py-3">Cost</th><th class="px-4 py-3">Value</th></tr>
             </thead>
@@ -155,7 +142,7 @@ onMounted(load)
               <tr v-for="p in data.items" :key="p.id">
                 <td class="px-4 py-3 font-medium">{{ p.name }}</td><td class="px-4 py-3 text-slate-400">{{ p.sku }}</td>
                 <td class="px-4 py-3">{{ p.category?.name }}</td>
-                <td class="px-4 py-3"><span :class="p.quantity <= 10 ? 'text-red-600 font-semibold' : ''">{{ p.quantity }}</span></td>
+                <td class="px-4 py-3"><span :class="p.quantity <= 10 ? 'font-semibold text-red-600' : ''">{{ p.quantity }}</span></td>
                 <td class="px-4 py-3">{{ money(p.cost_price) }}</td><td class="px-4 py-3 font-medium">{{ money(p.quantity * p.cost_price) }}</td>
               </tr>
             </tbody>

@@ -1,10 +1,14 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import api from '../lib/api'
 
+const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
-const mode = ref('supplier') // 'customer' | 'supplier'
+// Mode comes from the route: /ledger/:mode  (customer | supplier)
+const mode = computed(() => (route.params.mode === 'customer' ? 'customer' : 'supplier'))
+
 const customers = ref([])
 const suppliers = ref([])
 const partyId = ref('')
@@ -30,12 +34,11 @@ async function load() {
   }
 }
 
-function switchMode(m) {
-  mode.value = m
+// When the route mode changes, reselect the first party of that kind.
+watch(mode, () => {
   partyId.value = parties.value[0]?.id || ''
   load()
-}
-
+})
 watch(partyId, load)
 
 onMounted(async () => {
@@ -45,7 +48,7 @@ onMounted(async () => {
   ])
   customers.value = cus.data.data
   suppliers.value = sup.data.data
-  partyId.value = suppliers.value[0]?.id || ''
+  partyId.value = parties.value[0]?.id || ''
   load()
 })
 </script>
@@ -53,21 +56,15 @@ onMounted(async () => {
 <template>
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Ledger</h1>
+      <h1 class="text-2xl font-bold">{{ mode === 'customer' ? 'Customer Ledger' : 'Supplier Ledger' }}</h1>
       <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
     </div>
 
-    <div class="mb-4 flex flex-wrap items-end gap-3 print:hidden">
-      <div class="flex gap-2">
-        <button class="btn" :class="mode === 'supplier' ? 'bg-brand-600 text-white' : 'btn-ghost'" @click="switchMode('supplier')">Supplier</button>
-        <button class="btn" :class="mode === 'customer' ? 'bg-brand-600 text-white' : 'btn-ghost'" @click="switchMode('customer')">Customer</button>
-      </div>
-      <div class="min-w-56">
-        <label class="label">{{ mode === 'customer' ? 'Customer' : 'Supplier' }}</label>
-        <select v-model="partyId" class="input">
-          <option v-for="x in parties" :key="x.id" :value="x.id">{{ x.name }}</option>
-        </select>
-      </div>
+    <div class="mb-4 max-w-sm print:hidden">
+      <label class="label">{{ mode === 'customer' ? 'Customer' : 'Supplier' }}</label>
+      <select v-model="partyId" class="input">
+        <option v-for="x in parties" :key="x.id" :value="x.id">{{ x.name }}</option>
+      </select>
     </div>
 
     <div v-if="loading" class="py-16 text-center text-slate-400">Loading…</div>

@@ -56,8 +56,23 @@ const groups = [
     title: 'Finance',
     items: [
       { name: 'Payments', to: '/payments', icon: 'card', anyPerm: ['sales.manage', 'purchase.manage'] },
-      { name: 'Ledger', to: '/ledger', icon: 'book', perm: 'report.access' },
-      { name: 'Reports', to: '/reports', icon: 'chart', perm: 'report.access' },
+    ],
+  },
+  {
+    title: 'Reports',
+    items: [
+      { name: 'Sales Report', to: '/reports/sales', icon: 'cart', perm: 'report.access' },
+      { name: 'Purchase Report', to: '/reports/purchases', icon: 'bag', perm: 'report.access' },
+      { name: 'Customer Due', to: '/reports/customer-due', icon: 'user', perm: 'report.access' },
+      { name: 'Supplier Due', to: '/reports/supplier-due', icon: 'truck', perm: 'report.access' },
+      { name: 'Current Stock', to: '/reports/stock', icon: 'cube', perm: 'report.access' },
+    ],
+  },
+  {
+    title: 'Ledger',
+    items: [
+      { name: 'Customer Ledger', to: '/ledger/customer', icon: 'user', perm: 'report.access' },
+      { name: 'Supplier Ledger', to: '/ledger/supplier', icon: 'truck', perm: 'report.access' },
     ],
   },
   { title: 'Administration', items: [{ name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' }] },
