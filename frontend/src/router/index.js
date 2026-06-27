@@ -11,6 +11,7 @@ import CustomersView from '../views/CustomersView.vue'
 import PurchasesView from '../views/PurchasesView.vue'
 import SalesView from '../views/SalesView.vue'
 import ReportsView from '../views/ReportsView.vue'
+import PaymentsView from '../views/PaymentsView.vue'
 import UsersView from '../views/UsersView.vue'
 
 const routes = [
@@ -28,6 +29,7 @@ const routes = [
       { path: 'purchases', name: 'purchases', component: PurchasesView, meta: { perm: 'purchase.manage' } },
       { path: 'sales', name: 'sales', component: SalesView, meta: { perm: 'sales.manage' } },
       { path: 'reports', name: 'reports', component: ReportsView, meta: { perm: 'report.access' } },
+      { path: 'payments', name: 'payments', component: PaymentsView, meta: { anyPerm: ['sales.manage', 'purchase.manage'] } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],
   },
@@ -45,6 +47,7 @@ router.beforeEach((to) => {
   if (to.meta.public) return true
   if (!auth.isAuthenticated) return { name: 'login' }
   if (to.meta.perm && !auth.can(to.meta.perm)) return { name: 'dashboard' }
+  if (to.meta.anyPerm && !to.meta.anyPerm.some((p) => auth.can(p))) return { name: 'dashboard' }
   return true
 })
 

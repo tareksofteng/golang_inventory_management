@@ -28,5 +28,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&PurchaseItem{},
 		&Sale{},
 		&SaleItem{},
+		&Payment{},
 	)
 }

@@ -21,6 +21,7 @@ type Controllers struct {
 	Purchase  *controllers.PurchaseController
 	Sale      *controllers.SaleController
 	Report    *controllers.ReportController
+	Payment   *controllers.PaymentController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -54,6 +55,18 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	registerPurchaseRoutes(protected, c.Purchase)
 	registerSaleRoutes(protected, c.Sale)
 	registerReportRoutes(protected, c.Report)
+	registerPaymentRoutes(protected, c.Payment)
+}
+
+func registerPaymentRoutes(rg *gin.RouterGroup, ctrl *controllers.PaymentController) {
+	g := rg.Group("/payments")
+	{
+		// Customer receipts sit in the sales domain; supplier payments in purchase.
+		g.POST("/customer", middleware.RequirePermission(rbac.PermSalesManage), ctrl.PayCustomer)
+		g.POST("/supplier", middleware.RequirePermission(rbac.PermPurchaseManage), ctrl.PaySupplier)
+		g.GET("", ctrl.List) // history: any authenticated user
+
+	}
 }
 
 func registerReportRoutes(rg *gin.RouterGroup, ctrl *controllers.ReportController) {

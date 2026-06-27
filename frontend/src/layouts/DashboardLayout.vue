@@ -19,8 +19,12 @@ const nav = computed(() =>
     { name: 'Purchases', to: '/purchases', icon: '🧾', perm: 'purchase.manage' },
     { name: 'Sales', to: '/sales', icon: '🛒', perm: 'sales.manage' },
     { name: 'Reports', to: '/reports', icon: '📑', perm: 'report.access' },
+    { name: 'Payments', to: '/payments', icon: '💳', anyPerm: ['sales.manage', 'purchase.manage'] },
     { name: 'Users', to: '/users', icon: '🔐', perm: 'user.manage' },
-  ].filter((i) => !i.perm || auth.can(i.perm)),
+  ].filter((i) => {
+    if (i.anyPerm) return i.anyPerm.some((p) => auth.can(p))
+    return !i.perm || auth.can(i.perm)
+  }),
 )
 
 function toggleTheme() {
