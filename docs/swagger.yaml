@@ -89,6 +89,22 @@ definitions:
     - items
     - supplier_id
     type: object
+  internal_controllers.CreatePurchaseReturnRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_controllers.ReturnItemRequest'
+        minItems: 1
+        type: array
+      note:
+        maxLength: 255
+        type: string
+      supplier_id:
+        type: integer
+    required:
+    - items
+    - supplier_id
+    type: object
   internal_controllers.CreateSaleRequest:
     properties:
       customer_id:
@@ -104,6 +120,22 @@ definitions:
       paid_amount:
         minimum: 0
         type: number
+    required:
+    - customer_id
+    - items
+    type: object
+  internal_controllers.CreateSaleReturnRequest:
+    properties:
+      customer_id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/internal_controllers.ReturnItemRequest'
+        minItems: 1
+        type: array
+      note:
+        maxLength: 255
+        type: string
     required:
     - customer_id
     - items
@@ -211,6 +243,20 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  internal_controllers.ReturnItemRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      unit_value:
+        description: cost (purchase) or price (sale) per unit
+        minimum: 0
+        type: number
+    required:
+    - product_id
+    - quantity
     type: object
   internal_controllers.SaleItemRequest:
     properties:
@@ -837,6 +883,110 @@ paths:
       summary: Suppliers we owe money to
       tags:
       - Reports
+  /returns/purchase:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List purchase returns (paginated)
+      tags:
+      - Returns
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Purchase return
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.CreatePurchaseReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Return goods to a supplier (decreases stock + supplier due, transactional)
+      tags:
+      - Returns
+  /returns/sale:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List sale returns (paginated)
+      tags:
+      - Returns
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Sale return
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.CreateSaleReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Accept a customer return (increases stock + reduces customer due, transactional)
+      tags:
+      - Returns
   /sales:
     get:
       parameters:

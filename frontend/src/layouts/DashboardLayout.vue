@@ -20,6 +20,7 @@ const nav = computed(() =>
     { name: 'Sales', to: '/sales', icon: '🛒', perm: 'sales.manage' },
     { name: 'Reports', to: '/reports', icon: '📑', perm: 'report.access' },
     { name: 'Payments', to: '/payments', icon: '💳', anyPerm: ['sales.manage', 'purchase.manage'] },
+    { name: 'Returns', to: '/returns', icon: '↩️', anyPerm: ['sales.manage', 'purchase.manage'] },
     { name: 'Users', to: '/users', icon: '🔐', perm: 'user.manage' },
   ].filter((i) => {
     if (i.anyPerm) return i.anyPerm.some((p) => auth.can(p))

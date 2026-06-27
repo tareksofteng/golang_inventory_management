@@ -902,6 +902,172 @@ const docTemplate = `{
                 }
             }
         },
+        "/returns/purchase": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "List purchase returns (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Return goods to a supplier (decreases stock + supplier due, transactional)",
+                "parameters": [
+                    {
+                        "description": "Purchase return",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.CreatePurchaseReturnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/sale": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "List sale returns (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Accept a customer return (increases stock + reduces customer due, transactional)",
+                "parameters": [
+                    {
+                        "description": "Sale return",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.CreateSaleReturnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/sales": {
             "get": {
                 "security": [
@@ -1281,6 +1447,29 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_controllers.CreatePurchaseReturnRequest": {
+            "type": "object",
+            "required": [
+                "items",
+                "supplier_id"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.ReturnItemRequest"
+                    }
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "supplier_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_controllers.CreateSaleRequest": {
             "type": "object",
             "required": [
@@ -1305,6 +1494,29 @@ const docTemplate = `{
                 "paid_amount": {
                     "type": "number",
                     "minimum": 0
+                }
+            }
+        },
+        "internal_controllers.CreateSaleReturnRequest": {
+            "type": "object",
+            "required": [
+                "customer_id",
+                "items"
+            ],
+            "properties": {
+                "customer_id": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/internal_controllers.ReturnItemRequest"
+                    }
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -1452,6 +1664,26 @@ const docTemplate = `{
             "properties": {
                 "refresh_token": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_controllers.ReturnItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit_value": {
+                    "description": "cost (purchase) or price (sale) per unit",
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
