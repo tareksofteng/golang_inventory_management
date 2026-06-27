@@ -9,6 +9,7 @@ import CategoriesView from '../views/CategoriesView.vue'
 import SuppliersView from '../views/SuppliersView.vue'
 import CustomersView from '../views/CustomersView.vue'
 import PurchasesView from '../views/PurchasesView.vue'
+import SalesView from '../views/SalesView.vue'
 import UsersView from '../views/UsersView.vue'
 
 const routes = [
@@ -24,6 +25,7 @@ const routes = [
       { path: 'suppliers', name: 'suppliers', component: SuppliersView, meta: { perm: 'product.manage' } },
       { path: 'customers', name: 'customers', component: CustomersView, meta: { perm: 'sales.manage' } },
       { path: 'purchases', name: 'purchases', component: PurchasesView, meta: { perm: 'purchase.manage' } },
+      { path: 'sales', name: 'sales', component: SalesView, meta: { perm: 'sales.manage' } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],
   },
