@@ -89,3 +89,5 @@ func (s *paymentService) List(partyType string, page, perPage int) ([]models.Pay
 	offset := (page - 1) * perPage
 	return s.repo.FindAll(partyType, offset, perPage)
 }
+
+
