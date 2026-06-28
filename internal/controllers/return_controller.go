@@ -14,20 +14,20 @@ import (
 
 type ReturnItemRequest struct {
 	ProductID uint    `json:"product_id" binding:"required"`
-	Quantity  int     `json:"quantity" binding:"required,gt=0"`
-	UnitValue float64 `json:"unit_value" binding:"gte=0"` // cost (purchase) or price (sale) per unit
+	Quantity  int     `json:"quantity" binding:"gte=0"` // 0 = line not returned
+	UnitValue float64 `json:"unit_value" binding:"gte=0"`
 }
 
 type CreatePurchaseReturnRequest struct {
-	SupplierID uint                `json:"supplier_id" binding:"required"`
+	PurchaseID uint                `json:"purchase_id" binding:"required"`
 	Note       string              `json:"note" binding:"max=255"`
 	Items      []ReturnItemRequest `json:"items" binding:"required,min=1,dive"`
 }
 
 type CreateSaleReturnRequest struct {
-	CustomerID uint                `json:"customer_id" binding:"required"`
-	Note       string              `json:"note" binding:"max=255"`
-	Items      []ReturnItemRequest `json:"items" binding:"required,min=1,dive"`
+	SaleID uint                `json:"sale_id" binding:"required"`
+	Note   string              `json:"note" binding:"max=255"`
+	Items  []ReturnItemRequest `json:"items" binding:"required,min=1,dive"`
 }
 
 type ReturnController struct {
@@ -46,15 +46,71 @@ func toReturnItems(in []ReturnItemRequest) []services.ReturnItemInput {
 	return out
 }
 
+func returnWriteError(c *gin.Context, err error, notFound error, kind string) {
+	switch {
+	case errors.Is(err, notFound):
+		response.Error(c, http.StatusUnprocessableEntity, kind+" invoice does not exist", nil)
+	case errors.Is(err, services.ErrReturnExceedsAvailable):
+		response.Error(c, http.StatusUnprocessableEntity, "return quantity exceeds available quantity", nil)
+	case errors.Is(err, services.ErrInsufficientStock):
+		response.Error(c, http.StatusUnprocessableEntity, "cannot return more than current stock", nil)
+	case errors.Is(err, services.ErrNoItems):
+		response.Error(c, http.StatusUnprocessableEntity, "enter a return quantity for at least one item", nil)
+	default:
+		response.InternalError(c, "Failed to create return")
+	}
+}
+
+// LookupPurchase godoc
+// @Summary  Find a purchase by invoice no with returnable quantities
+// @Tags     Returns
+// @Produce  json
+// @Security BearerAuth
+// @Param    invoice  query     string  true  "Purchase invoice number"
+// @Success  200      {object}  map[string]interface{}
+// @Router   /returns/purchase/lookup [get]
+func (ctrl *ReturnController) LookupPurchase(c *gin.Context) {
+	lookup, err := ctrl.service.LookupPurchase(c.Query("invoice"))
+	if err != nil {
+		if errors.Is(err, services.ErrPurchaseNotFound) {
+			response.NotFound(c, "Purchase invoice not found")
+			return
+		}
+		response.InternalError(c, "Lookup failed")
+		return
+	}
+	response.Success(c, "Purchase found", lookup)
+}
+
+// LookupSale godoc
+// @Summary  Find a sale by invoice no with returnable quantities
+// @Tags     Returns
+// @Produce  json
+// @Security BearerAuth
+// @Param    invoice  query     string  true  "Sale invoice number"
+// @Success  200      {object}  map[string]interface{}
+// @Router   /returns/sale/lookup [get]
+func (ctrl *ReturnController) LookupSale(c *gin.Context) {
+	lookup, err := ctrl.service.LookupSale(c.Query("invoice"))
+	if err != nil {
+		if errors.Is(err, services.ErrSaleNotFound) {
+			response.NotFound(c, "Sale invoice not found")
+			return
+		}
+		response.InternalError(c, "Lookup failed")
+		return
+	}
+	response.Success(c, "Sale found", lookup)
+}
+
 // CreatePurchaseReturn godoc
-// @Summary  Return goods to a supplier (decreases stock + supplier due, transactional)
+// @Summary  Return goods against a purchase invoice (decreases stock + supplier due)
 // @Tags     Returns
 // @Accept   json
 // @Produce  json
 // @Security BearerAuth
 // @Param    body  body      CreatePurchaseReturnRequest  true  "Purchase return"
 // @Success  201   {object}  map[string]interface{}
-// @Failure  422   {object}  map[string]interface{}
 // @Router   /returns/purchase [post]
 func (ctrl *ReturnController) CreatePurchaseReturn(c *gin.Context) {
 	var req CreatePurchaseReturnRequest
@@ -62,29 +118,45 @@ func (ctrl *ReturnController) CreatePurchaseReturn(c *gin.Context) {
 		response.BadRequest(c, "Validation failed", response.ValidationErrors(err))
 		return
 	}
-
 	ret, err := ctrl.service.CreatePurchaseReturn(services.CreatePurchaseReturnInput{
-		SupplierID: req.SupplierID,
+		PurchaseID: req.PurchaseID,
 		UserID:     middleware.UserID(c),
 		Note:       req.Note,
 		Items:      toReturnItems(req.Items),
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrSupplierNotFound):
-			response.Error(c, http.StatusUnprocessableEntity, "supplier_id does not exist", nil)
-		case errors.Is(err, services.ErrProductNotFound):
-			response.Error(c, http.StatusUnprocessableEntity, "one of the products does not exist", nil)
-		case errors.Is(err, services.ErrInsufficientStock):
-			response.Error(c, http.StatusUnprocessableEntity, "cannot return more than current stock", nil)
-		case errors.Is(err, services.ErrNoItems):
-			response.Error(c, http.StatusUnprocessableEntity, err.Error(), nil)
-		default:
-			response.InternalError(c, "Failed to create purchase return")
-		}
+		returnWriteError(c, err, services.ErrPurchaseNotFound, "purchase")
 		return
 	}
 	response.Created(c, "Purchase return created", ret)
+}
+
+// CreateSaleReturn godoc
+// @Summary  Return goods against a sale invoice (increases stock + reduces customer due)
+// @Tags     Returns
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    body  body      CreateSaleReturnRequest  true  "Sale return"
+// @Success  201   {object}  map[string]interface{}
+// @Router   /returns/sale [post]
+func (ctrl *ReturnController) CreateSaleReturn(c *gin.Context) {
+	var req CreateSaleReturnRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Validation failed", response.ValidationErrors(err))
+		return
+	}
+	ret, err := ctrl.service.CreateSaleReturn(services.CreateSaleReturnInput{
+		SaleID: req.SaleID,
+		UserID: middleware.UserID(c),
+		Note:   req.Note,
+		Items:  toReturnItems(req.Items),
+	})
+	if err != nil {
+		returnWriteError(c, err, services.ErrSaleNotFound, "sale")
+		return
+	}
+	response.Created(c, "Sale return created", ret)
 }
 
 // ListPurchaseReturns godoc
@@ -92,9 +164,7 @@ func (ctrl *ReturnController) CreatePurchaseReturn(c *gin.Context) {
 // @Tags     Returns
 // @Produce  json
 // @Security BearerAuth
-// @Param    page      query     int  false  "Page number"
-// @Param    per_page  query     int  false  "Items per page"
-// @Success  200       {object}  map[string]interface{}
+// @Success  200  {object}  map[string]interface{}
 // @Router   /returns/purchase [get]
 func (ctrl *ReturnController) ListPurchaseReturns(c *gin.Context) {
 	p := pagination.Parse(c)
@@ -108,53 +178,12 @@ func (ctrl *ReturnController) ListPurchaseReturns(c *gin.Context) {
 	})
 }
 
-// CreateSaleReturn godoc
-// @Summary  Accept a customer return (increases stock + reduces customer due, transactional)
-// @Tags     Returns
-// @Accept   json
-// @Produce  json
-// @Security BearerAuth
-// @Param    body  body      CreateSaleReturnRequest  true  "Sale return"
-// @Success  201   {object}  map[string]interface{}
-// @Failure  422   {object}  map[string]interface{}
-// @Router   /returns/sale [post]
-func (ctrl *ReturnController) CreateSaleReturn(c *gin.Context) {
-	var req CreateSaleReturnRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "Validation failed", response.ValidationErrors(err))
-		return
-	}
-
-	ret, err := ctrl.service.CreateSaleReturn(services.CreateSaleReturnInput{
-		CustomerID: req.CustomerID,
-		UserID:     middleware.UserID(c),
-		Note:       req.Note,
-		Items:      toReturnItems(req.Items),
-	})
-	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrCustomerNotFound):
-			response.Error(c, http.StatusUnprocessableEntity, "customer_id does not exist", nil)
-		case errors.Is(err, services.ErrProductNotFound):
-			response.Error(c, http.StatusUnprocessableEntity, "one of the products does not exist", nil)
-		case errors.Is(err, services.ErrNoItems):
-			response.Error(c, http.StatusUnprocessableEntity, err.Error(), nil)
-		default:
-			response.InternalError(c, "Failed to create sale return")
-		}
-		return
-	}
-	response.Created(c, "Sale return created", ret)
-}
-
 // ListSaleReturns godoc
 // @Summary  List sale returns (paginated)
 // @Tags     Returns
 // @Produce  json
 // @Security BearerAuth
-// @Param    page      query     int  false  "Page number"
-// @Param    per_page  query     int  false  "Items per page"
-// @Success  200       {object}  map[string]interface{}
+// @Success  200  {object}  map[string]interface{}
 // @Router   /returns/sale [get]
 func (ctrl *ReturnController) ListSaleReturns(c *gin.Context) {
 	p := pagination.Parse(c)

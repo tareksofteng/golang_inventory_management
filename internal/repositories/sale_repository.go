@@ -18,6 +18,7 @@ type SaleRepository interface {
 	CountAll() (int64, error)
 	FindAll(search string, offset, limit int) ([]models.Sale, int64, error)
 	FindByID(id uint) (*models.Sale, error)
+	FindByInvoiceNo(invoiceNo string) (*models.Sale, error)
 	Delete(id uint) error
 }
 
@@ -104,6 +105,20 @@ func (r *saleRepository) FindByID(id uint) (*models.Sale, error) {
 		Preload("Customer").
 		Preload("Items.Product").
 		First(&sale, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &sale, nil
+}
+
+// FindByInvoiceNo looks up a sale by its human invoice number (for returns).
+func (r *saleRepository) FindByInvoiceNo(invoiceNo string) (*models.Sale, error) {
+	var sale models.Sale
+	err := r.db.
+		Preload("Customer").
+		Preload("Items.Product").
+		Where("invoice_no = ?", invoiceNo).
+		First(&sale).Error
 	if err != nil {
 		return nil, err
 	}

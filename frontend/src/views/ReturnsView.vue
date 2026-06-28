@@ -1,214 +1,233 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import api from '../lib/api'
-import Modal from '../components/Modal.vue'
+import api, { assetUrl } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
-const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
+const money = (n) => 'BDT ' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })
 
-// Which history we are viewing: 'purchase' | 'sale'. A ?tab= query (set by the
-// sidebar "Purchase Returns" / "Sales Returns" links) chooses the initial tab.
-const initialTab = route.query.tab === 'sale' || route.query.tab === 'purchase'
-  ? route.query.tab
-  : auth.can('purchase.manage') ? 'purchase' : 'sale'
-const view = ref(initialTab)
-
-// React when the sidebar link changes the tab while we're already on the page.
-watch(
-  () => route.query.tab,
-  (t) => {
-    if ((t === 'purchase' || t === 'sale') && t !== view.value) {
-      view.value = t
-      page.value = 1
-      load()
-    }
-  },
+// Mode from the sidebar links (?tab=purchase|sale).
+const mode = computed(() => {
+  if (route.query.tab === 'sale' || route.query.tab === 'purchase') return route.query.tab
+  return auth.can('purchase.manage') ? 'purchase' : 'sale'
+})
+const isPurchase = computed(() => mode.value === 'purchase')
+const labels = computed(() =>
+  isPurchase.value
+    ? { title: 'Purchase Returns', sub: 'Return goods to suppliers and adjust stock', find: 'Find Purchase Invoice', party: 'Supplier', orderedCol: 'Purchased', unitCol: 'Unit Cost', no: 'Purchase No.' }
+    : { title: 'Sales Returns', sub: 'Accept customer returns and adjust stock', find: 'Find Sale Invoice', party: 'Customer', orderedCol: 'Sold', unitCol: 'Unit Price', no: 'Sale No.' },
 )
-const rows = ref([])
-const meta = ref({ page: 1, total: 0, total_pages: 1 })
-const page = ref(1)
-const loading = ref(false)
 
-const suppliers = ref([])
-const customers = ref([])
-const products = ref([])
-
-const showModal = ref(false)
-const mode = ref('purchase') // create mode
+const search = ref('')
+const lookup = ref(null)
+const positions = ref([])
+const note = ref('')
+const error = ref('')
+const searching = ref(false)
 const saving = ref(false)
-const formError = ref('')
-const form = reactive({ party_id: '', note: '', items: [] })
 
-const parties = computed(() => (mode.value === 'purchase' ? suppliers.value : customers.value))
-const total = computed(() =>
-  form.items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_value || 0), 0),
-)
+const recent = ref([])
+const recentMeta = ref({ total: 0 })
 
-async function load() {
-  loading.value = true
+const total = computed(() => positions.value.reduce((s, p) => s + Number(p.return_qty || 0) * Number(p.unit_value || 0), 0))
+
+async function doSearch() {
+  if (!search.value.trim()) return
+  searching.value = true
+  error.value = ''
+  lookup.value = null
   try {
-    const endpoint = view.value === 'purchase' ? '/returns/purchase' : '/returns/sale'
-    const { data } = await api.get(endpoint, { params: { page: page.value, per_page: 10 } })
-    rows.value = data.data
-    meta.value = data.meta
+    const { data } = await api.get(`/returns/${mode.value}/lookup`, { params: { invoice: search.value.trim() } })
+    lookup.value = data.data
+    positions.value = data.data.items.map((it) => ({ ...it, return_qty: 0, unit_value: it.unit_value }))
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Invoice not found'
   } finally {
-    loading.value = false
+    searching.value = false
   }
 }
 
-function switchView(v) {
-  view.value = v
-  page.value = 1
-  load()
-}
-
-const newRow = () => ({ product_id: products.value[0]?.id || '', quantity: 1, unit_value: 0 })
-
-function open(m) {
-  mode.value = m
-  form.party_id = parties.value[0]?.id || ''
-  form.note = ''
-  form.items = [newRow()]
-  formError.value = ''
-  showModal.value = true
-}
-const addRow = () => form.items.push(newRow())
-const removeRow = (i) => form.items.splice(i, 1)
-
 async function save() {
+  const items = positions.value.filter((p) => Number(p.return_qty) > 0)
+  if (!items.length) {
+    error.value = 'Enter a return quantity for at least one item'
+    return
+  }
   saving.value = true
-  formError.value = ''
-  const isPurchase = mode.value === 'purchase'
-  const endpoint = isPurchase ? '/returns/purchase' : '/returns/sale'
-  const idKey = isPurchase ? 'supplier_id' : 'customer_id'
+  error.value = ''
+  const idKey = isPurchase.value ? 'purchase_id' : 'sale_id'
   try {
-    await api.post(endpoint, {
-      [idKey]: Number(form.party_id),
-      note: form.note,
-      items: form.items.map((it) => ({
-        product_id: Number(it.product_id),
-        quantity: Number(it.quantity),
-        unit_value: Number(it.unit_value),
-      })),
+    await api.post(`/returns/${mode.value}`, {
+      [idKey]: lookup.value.source_id,
+      note: note.value,
+      items: items.map((p) => ({ product_id: p.product_id, quantity: Number(p.return_qty), unit_value: Number(p.unit_value) })),
     })
-    showModal.value = false
-    view.value = mode.value
-    page.value = 1
-    load()
+    // reset and refresh
+    search.value = ''
+    lookup.value = null
+    positions.value = []
+    note.value = ''
+    loadRecent()
   } catch (e) {
-    formError.value = e.response?.data?.message || 'Failed to save return'
+    error.value = e.response?.data?.message || 'Failed to save return'
   } finally {
     saving.value = false
   }
 }
 
-onMounted(async () => {
-  const [sup, cus, prod] = await Promise.all([
-    api.get('/suppliers', { params: { per_page: 100 } }),
-    api.get('/customers', { params: { per_page: 100 } }),
-    api.get('/products', { params: { per_page: 100 } }),
-  ])
-  suppliers.value = sup.data.data
-  customers.value = cus.data.data
-  products.value = prod.data.data
-  load()
+async function loadRecent() {
+  const { data } = await api.get(`/returns/${mode.value}`, { params: { per_page: 8 } })
+  recent.value = data.data
+  recentMeta.value = data.meta
+}
+
+const today = new Date().toLocaleDateString()
+
+watch(mode, () => {
+  search.value = ''
+  lookup.value = null
+  positions.value = []
+  error.value = ''
+  loadRecent()
 })
+onMounted(loadRecent)
 </script>
 
 <template>
-  <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-bold">Returns</h1>
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold">{{ labels.title }}</h1>
+      <p class="text-sm text-slate-500">{{ labels.sub }}</p>
+    </div>
+
+    <!-- Find invoice -->
+    <div class="card p-5">
+      <label class="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3m1.8-4.45a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0Z" /></svg>
+        {{ labels.find }}
+      </label>
       <div class="flex gap-2">
-        <button v-if="auth.can('purchase.manage')" class="btn-ghost" @click="open('purchase')">📤 Purchase Return</button>
-        <button v-if="auth.can('sales.manage')" class="btn-primary" @click="open('sale')">📥 Sales Return</button>
+        <input
+          v-model="search"
+          class="input"
+          :placeholder="isPurchase ? 'e.g. PUR-000006' : 'e.g. SAL-000006'"
+          @keyup.enter="doSearch"
+        />
+        <button class="btn-primary whitespace-nowrap" :disabled="searching" @click="doSearch">{{ searching ? 'Searching…' : 'Search' }}</button>
       </div>
+      <p v-if="error" class="mt-2 text-sm text-red-600">{{ error }}</p>
     </div>
 
-    <!-- View toggle -->
-    <div class="mb-4 flex gap-2">
-      <button v-if="auth.can('purchase.manage')" class="btn" :class="view === 'purchase' ? 'bg-brand-600 text-white' : 'btn-ghost'" @click="switchView('purchase')">Purchase Returns</button>
-      <button v-if="auth.can('sales.manage')" class="btn" :class="view === 'sale' ? 'bg-brand-600 text-white' : 'btn-ghost'" @click="switchView('sale')">Sales Returns</button>
-    </div>
+    <template v-if="lookup">
+      <!-- Party + invoice details -->
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="card p-5">
+          <div class="mb-2 text-xs font-bold uppercase tracking-wider text-brand-600">{{ labels.party }}</div>
+          <div class="text-lg font-bold">{{ lookup.party_name || '—' }}</div>
+          <div class="text-sm text-slate-500">{{ lookup.party_phone }}</div>
+          <div class="text-sm text-slate-500">{{ lookup.party_address }}</div>
+        </div>
+        <div class="card p-5 text-sm">
+          <div class="mb-2 text-xs font-bold uppercase tracking-wider text-brand-600">Invoice Details</div>
+          <div class="flex justify-between py-0.5"><span class="text-slate-500">{{ labels.no }}</span><span class="font-mono font-semibold">{{ lookup.invoice_no }}</span></div>
+          <div class="flex justify-between py-0.5"><span class="text-slate-500">Date</span><span class="font-medium">{{ new Date(lookup.date).toLocaleDateString() }}</span></div>
+        </div>
+      </div>
 
+      <!-- Return positions -->
+      <div class="card overflow-hidden">
+        <div class="border-b border-slate-200 px-5 py-3 font-semibold dark:border-slate-700">Return Positions</div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
+              <tr>
+                <th class="px-4 py-3">#</th>
+                <th class="px-4 py-3">Product</th>
+                <th class="px-4 py-3 text-center">{{ labels.orderedCol }}</th>
+                <th class="px-4 py-3 text-center">Already Returned</th>
+                <th class="px-4 py-3 text-center">Available</th>
+                <th class="w-28 px-4 py-3 text-center">Return Qty</th>
+                <th class="w-32 px-4 py-3 text-center">{{ labels.unitCol }}</th>
+                <th class="px-4 py-3 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr v-for="(p, i) in positions" :key="p.product_id">
+                <td class="px-4 py-3 text-slate-400">{{ i + 1 }}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-3">
+                    <img v-if="p.image" :src="assetUrl(p.image)" class="h-9 w-9 rounded-lg border border-slate-200 object-cover" />
+                    <span v-else class="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-[9px] text-slate-400 dark:bg-slate-700">IMG</span>
+                    <div>
+                      <div class="font-medium">{{ p.name }}</div>
+                      <div class="text-xs text-slate-400">{{ p.sku }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-center">{{ p.ordered }}</td>
+                <td class="px-4 py-3 text-center text-slate-400">{{ p.already_returned || '—' }}</td>
+                <td class="px-4 py-3 text-center font-semibold text-emerald-600">{{ p.available }}</td>
+                <td class="px-4 py-3">
+                  <input v-model.number="p.return_qty" type="number" min="0" :max="p.available" class="input !py-1.5 text-center" :disabled="p.available <= 0" />
+                </td>
+                <td class="px-4 py-3">
+                  <input v-model.number="p.unit_value" type="number" min="0" class="input !py-1.5 text-center" />
+                </td>
+                <td class="px-4 py-3 text-right font-semibold">{{ money(p.return_qty * p.unit_value) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Footer: note + total + save -->
+      <div class="grid gap-4 lg:grid-cols-3">
+        <div class="card p-5 lg:col-span-2">
+          <div class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Return Date: {{ today }}</div>
+          <label class="label">Note</label>
+          <textarea v-model="note" rows="2" class="input" placeholder="Reason for return (optional)"></textarea>
+        </div>
+        <div class="card flex flex-col justify-between p-5">
+          <div class="rounded-xl bg-amber-50 p-4 text-center dark:bg-amber-500/10">
+            <div class="text-xs font-bold uppercase tracking-wider text-amber-600">Total Return</div>
+            <div class="mt-1 text-2xl font-extrabold text-amber-600">{{ money(total) }}</div>
+          </div>
+          <button class="btn-primary mt-3 w-full" :disabled="saving || total <= 0" @click="save">
+            {{ saving ? 'Saving…' : '↩ Save Return' }}
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Recent returns -->
     <div class="card overflow-hidden">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-700">
+        <span class="font-semibold">Recent Returns</span>
+        <span class="text-xs text-slate-400">{{ recentMeta.total }} total</span>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-700 dark:bg-slate-700/40">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
             <tr>
-              <th class="px-4 py-3">Invoice</th>
-              <th class="px-4 py-3">{{ view === 'purchase' ? 'Supplier' : 'Customer' }}</th>
-              <th class="px-4 py-3">Amount</th><th class="px-4 py-3">Note</th><th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3">Return No.</th>
+              <th class="px-4 py-3">{{ labels.party }}</th>
+              <th class="px-4 py-3 text-right">Amount</th>
+              <th class="px-4 py-3">Date</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-            <tr v-if="loading"><td colspan="5" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
-            <tr v-else-if="!rows.length"><td colspan="5" class="px-4 py-10 text-center text-slate-400">No returns yet</td></tr>
-            <tr v-for="r in rows" :key="r.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+            <tr v-if="!recent.length"><td colspan="4" class="px-4 py-8 text-center text-slate-400">No returns yet</td></tr>
+            <tr v-for="r in recent" :key="r.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ r.invoice_no }}</td>
               <td class="px-4 py-3">{{ (r.supplier || r.customer)?.name }}</td>
-              <td class="px-4 py-3 font-semibold">{{ money(r.total_amount) }}</td>
-              <td class="px-4 py-3 text-slate-400">{{ r.note || '—' }}</td>
+              <td class="px-4 py-3 text-right font-semibold">{{ money(r.total_amount) }}</td>
               <td class="px-4 py-3 text-slate-400">{{ new Date(r.created_at).toLocaleDateString() }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
-        <span class="text-slate-500">Page {{ meta.page }} of {{ meta.total_pages || 1 }} · {{ meta.total }} total</span>
-        <div class="flex gap-2">
-          <button class="btn-ghost !py-1" :disabled="page <= 1" @click="page--; load()">Prev</button>
-          <button class="btn-ghost !py-1" :disabled="page >= meta.total_pages" @click="page++; load()">Next</button>
-        </div>
-      </div>
     </div>
-
-    <Modal v-if="showModal" :title="mode === 'purchase' ? 'Purchase Return' : 'Sales Return'" @close="showModal = false">
-      <form class="space-y-4" @submit.prevent="save">
-        <div v-if="formError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10">{{ formError }}</div>
-
-        <div>
-          <label class="label">{{ mode === 'purchase' ? 'Supplier' : 'Customer' }}</label>
-          <select v-model="form.party_id" class="input">
-            <option v-for="x in parties" :key="x.id" :value="x.id">{{ x.name }}</option>
-          </select>
-        </div>
-
-        <div>
-          <div class="mb-1 flex items-center justify-between">
-            <label class="label !mb-0">Items</label>
-            <button type="button" class="btn-ghost !px-2 !py-1 text-xs" @click="addRow">+ Add Item</button>
-          </div>
-          <div class="space-y-2">
-            <div v-for="(it, i) in form.items" :key="i" class="flex items-center gap-2">
-              <select v-model="it.product_id" class="input flex-1">
-                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} (stock: {{ p.quantity }})</option>
-              </select>
-              <input v-model.number="it.quantity" type="number" min="1" class="input w-20" placeholder="Qty" />
-              <input v-model.number="it.unit_value" type="number" min="0" class="input w-28" :placeholder="mode === 'purchase' ? 'Cost' : 'Price'" />
-              <button type="button" class="btn-danger !px-2 !py-1 text-xs" :disabled="form.items.length === 1" @click="removeRow(i)">✕</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/50">
-          <span class="text-sm text-slate-500">Total Return Amount</span>
-          <span class="font-semibold">{{ money(total) }}</span>
-        </div>
-
-        <div>
-          <label class="label">Note</label>
-          <input v-model="form.note" class="input" placeholder="Reason for return (optional)" />
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
-          <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Saving…' : 'Save Return' }}</button>
-        </div>
-      </form>
-    </Modal>
   </div>
 </template>

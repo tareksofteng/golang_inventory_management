@@ -141,7 +141,7 @@ func main() {
 	paymentController := controllers.NewPaymentController(paymentService)
 
 	returnRepo := repositories.NewReturnRepository(db)
-	returnService := services.NewReturnService(returnRepo, supplierRepo, customerRepo, productRepo)
+	returnService := services.NewReturnService(returnRepo, purchaseRepo, saleRepo)
 	returnController := controllers.NewReturnController(returnService)
 
 	ledgerRepo := repositories.NewLedgerRepository(db)

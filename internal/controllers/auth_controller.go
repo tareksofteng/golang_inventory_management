@@ -24,11 +24,9 @@ type RefreshRequest struct {
 
 type LogoutRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
-
 }
 
 type AuthController struct {
-
 	authService services.AuthService
 	userService services.UserService
 }

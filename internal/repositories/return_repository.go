@@ -13,6 +13,22 @@ type ReturnRepository interface {
 	CountSaleReturns() (int64, error)
 	FindPurchaseReturns(offset, limit int) ([]models.PurchaseReturn, int64, error)
 	FindSaleReturns(offset, limit int) ([]models.SaleReturn, int64, error)
+	// Already-returned quantity per product for a given source invoice.
+	ReturnedQtyByPurchase(purchaseID uint) (map[uint]int, error)
+	ReturnedQtyBySale(saleID uint) (map[uint]int, error)
+}
+
+type productQty struct {
+	ProductID uint
+	Qty       int
+}
+
+func toQtyMap(rows []productQty) map[uint]int {
+	m := make(map[uint]int, len(rows))
+	for _, r := range rows {
+		m[r.ProductID] = r.Qty
+	}
+	return m
 }
 
 type returnRepository struct {
@@ -97,4 +113,26 @@ func (r *returnRepository) FindSaleReturns(offset, limit int) ([]models.SaleRetu
 	}
 	err := r.db.Preload("Customer").Order("id DESC").Offset(offset).Limit(limit).Find(&rows).Error
 	return rows, total, err
+}
+
+func (r *returnRepository) ReturnedQtyByPurchase(purchaseID uint) (map[uint]int, error) {
+	var rows []productQty
+	err := r.db.Table("purchase_return_items").
+		Select("purchase_return_items.product_id as product_id, SUM(purchase_return_items.quantity) as qty").
+		Joins("JOIN purchase_returns ON purchase_returns.id = purchase_return_items.purchase_return_id").
+		Where("purchase_returns.purchase_id = ? AND purchase_return_items.deleted_at IS NULL", purchaseID).
+		Group("purchase_return_items.product_id").
+		Scan(&rows).Error
+	return toQtyMap(rows), err
+}
+
+func (r *returnRepository) ReturnedQtyBySale(saleID uint) (map[uint]int, error) {
+	var rows []productQty
+	err := r.db.Table("sale_return_items").
+		Select("sale_return_items.product_id as product_id, SUM(sale_return_items.quantity) as qty").
+		Joins("JOIN sale_returns ON sale_returns.id = sale_return_items.sale_return_id").
+		Where("sale_returns.sale_id = ? AND sale_return_items.deleted_at IS NULL", saleID).
+		Group("sale_return_items.product_id").
+		Scan(&rows).Error
+	return toQtyMap(rows), err
 }

@@ -6,6 +6,7 @@ package models
 type PurchaseReturn struct {
 	BaseModel
 	InvoiceNo   string  `gorm:"type:varchar(30);not null;uniqueIndex" json:"invoice_no"`
+	PurchaseID  uint    `gorm:"not null;index" json:"purchase_id"` // the original purchase being returned against
 	SupplierID  uint    `gorm:"not null;index" json:"supplier_id"`
 	UserID      uint    `gorm:"not null;index" json:"user_id"`
 	TotalAmount float64 `gorm:"type:decimal(14,2);not null" json:"total_amount"`

@@ -108,11 +108,11 @@ definitions:
       note:
         maxLength: 255
         type: string
-      supplier_id:
+      purchase_id:
         type: integer
     required:
     - items
-    - supplier_id
+    - purchase_id
     type: object
   internal_controllers.CreateSaleRequest:
     properties:
@@ -141,8 +141,6 @@ definitions:
     type: object
   internal_controllers.CreateSaleReturnRequest:
     properties:
-      customer_id:
-        type: integer
       items:
         items:
           $ref: '#/definitions/internal_controllers.ReturnItemRequest'
@@ -151,9 +149,11 @@ definitions:
       note:
         maxLength: 255
         type: string
+      sale_id:
+        type: integer
     required:
-    - customer_id
     - items
+    - sale_id
     type: object
   internal_controllers.CreateSupplierRequest:
     properties:
@@ -264,14 +264,14 @@ definitions:
       product_id:
         type: integer
       quantity:
+        description: 0 = line not returned
+        minimum: 0
         type: integer
       unit_value:
-        description: cost (purchase) or price (sale) per unit
         minimum: 0
         type: number
     required:
     - product_id
-    - quantity
     type: object
   internal_controllers.SaleItemRequest:
     properties:
@@ -976,15 +976,6 @@ paths:
       - Reports
   /returns/purchase:
     get:
-      parameters:
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Items per page
-        in: query
-        name: per_page
-        type: integer
       produces:
       - application/json
       responses:
@@ -1016,27 +1007,35 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "422":
-          description: Unprocessable Entity
+      security:
+      - BearerAuth: []
+      summary: Return goods against a purchase invoice (decreases stock + supplier
+        due)
+      tags:
+      - Returns
+  /returns/purchase/lookup:
+    get:
+      parameters:
+      - description: Purchase invoice number
+        in: query
+        name: invoice
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Return goods to a supplier (decreases stock + supplier due, transactional)
+      summary: Find a purchase by invoice no with returnable quantities
       tags:
       - Returns
   /returns/sale:
     get:
-      parameters:
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Items per page
-        in: query
-        name: per_page
-        type: integer
       produces:
       - application/json
       responses:
@@ -1068,14 +1067,31 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "422":
-          description: Unprocessable Entity
+      security:
+      - BearerAuth: []
+      summary: Return goods against a sale invoice (increases stock + reduces customer
+        due)
+      tags:
+      - Returns
+  /returns/sale/lookup:
+    get:
+      parameters:
+      - description: Sale invoice number
+        in: query
+        name: invoice
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Accept a customer return (increases stock + reduces customer due, transactional)
+      summary: Find a sale by invoice no with returnable quantities
       tags:
       - Returns
   /sales:

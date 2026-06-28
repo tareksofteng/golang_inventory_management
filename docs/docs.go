@@ -1032,20 +1032,6 @@ const docTemplate = `{
                     "Returns"
                 ],
                 "summary": "List purchase returns (paginated)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Items per page",
-                        "name": "per_page",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1071,7 +1057,7 @@ const docTemplate = `{
                 "tags": [
                     "Returns"
                 ],
-                "summary": "Return goods to a supplier (decreases stock + supplier due, transactional)",
+                "summary": "Return goods against a purchase invoice (decreases stock + supplier due)",
                 "parameters": [
                     {
                         "description": "Purchase return",
@@ -1090,9 +1076,36 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity",
+                    }
+                }
+            }
+        },
+        "/returns/purchase/lookup": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Find a purchase by invoice no with returnable quantities",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Purchase invoice number",
+                        "name": "invoice",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1115,20 +1128,6 @@ const docTemplate = `{
                     "Returns"
                 ],
                 "summary": "List sale returns (paginated)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Items per page",
-                        "name": "per_page",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1154,7 +1153,7 @@ const docTemplate = `{
                 "tags": [
                     "Returns"
                 ],
-                "summary": "Accept a customer return (increases stock + reduces customer due, transactional)",
+                "summary": "Return goods against a sale invoice (increases stock + reduces customer due)",
                 "parameters": [
                     {
                         "description": "Sale return",
@@ -1173,9 +1172,36 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity",
+                    }
+                }
+            }
+        },
+        "/returns/sale/lookup": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Find a sale by invoice no with returnable quantities",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Sale invoice number",
+                        "name": "invoice",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1650,7 +1676,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "items",
-                "supplier_id"
+                "purchase_id"
             ],
             "properties": {
                 "items": {
@@ -1664,7 +1690,7 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255
                 },
-                "supplier_id": {
+                "purchase_id": {
                     "type": "integer"
                 }
             }
@@ -1707,13 +1733,10 @@ const docTemplate = `{
         "internal_controllers.CreateSaleReturnRequest": {
             "type": "object",
             "required": [
-                "customer_id",
-                "items"
+                "items",
+                "sale_id"
             ],
             "properties": {
-                "customer_id": {
-                    "type": "integer"
-                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
@@ -1724,6 +1747,9 @@ const docTemplate = `{
                 "note": {
                     "type": "string",
                     "maxLength": 255
+                },
+                "sale_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -1877,18 +1903,18 @@ const docTemplate = `{
         "internal_controllers.ReturnItemRequest": {
             "type": "object",
             "required": [
-                "product_id",
-                "quantity"
+                "product_id"
             ],
             "properties": {
                 "product_id": {
                     "type": "integer"
                 },
                 "quantity": {
-                    "type": "integer"
+                    "description": "0 = line not returned",
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "unit_value": {
-                    "description": "cost (purchase) or price (sale) per unit",
                     "type": "number",
                     "minimum": 0
                 }

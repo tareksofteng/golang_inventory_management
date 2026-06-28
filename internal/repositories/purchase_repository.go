@@ -12,6 +12,7 @@ type PurchaseRepository interface {
 	CountAll() (int64, error)
 	FindAll(search string, offset, limit int) ([]models.Purchase, int64, error)
 	FindByID(id uint) (*models.Purchase, error)
+	FindByInvoiceNo(invoiceNo string) (*models.Purchase, error)
 	Delete(id uint) error
 }
 
@@ -103,6 +104,20 @@ func (r *purchaseRepository) FindByID(id uint) (*models.Purchase, error) {
 		Preload("Supplier").
 		Preload("Items.Product").
 		First(&purchase, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &purchase, nil
+}
+
+// FindByInvoiceNo looks up a purchase by its human invoice number (for returns).
+func (r *purchaseRepository) FindByInvoiceNo(invoiceNo string) (*models.Purchase, error) {
+	var purchase models.Purchase
+	err := r.db.
+		Preload("Supplier").
+		Preload("Items.Product").
+		Where("invoice_no = ?", invoiceNo).
+		First(&purchase).Error
 	if err != nil {
 		return nil, err
 	}
