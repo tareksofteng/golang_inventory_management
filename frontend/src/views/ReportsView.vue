@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import api from '../lib/api'
+import api, { assetUrl } from '../lib/api'
 
 const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
@@ -140,7 +140,14 @@ onMounted(load)
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
               <tr v-for="p in data.items" :key="p.id">
-                <td class="px-4 py-3 font-medium">{{ p.name }}</td><td class="px-4 py-3 text-slate-400">{{ p.sku }}</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <img v-if="p.image" :src="assetUrl(p.image)" class="h-8 w-8 rounded border border-slate-200 object-cover" />
+                    <span v-else class="grid h-8 w-8 place-items-center rounded bg-slate-100 text-[9px] text-slate-400 dark:bg-slate-700">IMG</span>
+                    <span class="font-medium">{{ p.name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-slate-400">{{ p.sku }}</td>
                 <td class="px-4 py-3">{{ p.category?.name }}</td>
                 <td class="px-4 py-3"><span :class="p.quantity <= 10 ? 'font-semibold text-red-600' : ''">{{ p.quantity }}</span></td>
                 <td class="px-4 py-3">{{ money(p.cost_price) }}</td><td class="px-4 py-3 font-medium">{{ money(p.quantity * p.cost_price) }}</td>

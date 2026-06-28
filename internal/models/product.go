@@ -14,8 +14,9 @@ package models
 type Product struct {
 	BaseModel
 
-	Name string `gorm:"type:varchar(150);not null" json:"name"`
-	SKU  string `gorm:"type:varchar(50);not null;uniqueIndex" json:"sku"` // Stock Keeping Unit — unique product code
+	Name  string `gorm:"type:varchar(150);not null" json:"name"`
+	SKU   string `gorm:"type:varchar(50);not null;uniqueIndex" json:"sku"` // Stock Keeping Unit — unique product code
+	Image string `gorm:"type:varchar(255)" json:"image"`                   // relative URL e.g. /uploads/abc.jpg
 
 	// Foreign keys. `index` speeds up the JOIN/filter on these columns.
 	CategoryID uint `gorm:"not null;index" json:"category_id"`

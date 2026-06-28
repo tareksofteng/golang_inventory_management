@@ -831,6 +831,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/purchases/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Void a purchase (reverses stock + supplier due, transactional)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Purchase ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/reports/customer-due": {
             "get": {
                 "security": [
@@ -1239,6 +1273,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/sales/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Sales"
+                ],
+                "summary": "Void a sale (returns stock + reverses customer due, transactional)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sale ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/suppliers": {
             "get": {
                 "security": [
@@ -1313,6 +1381,43 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/uploads": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Uploads"
+                ],
+                "summary": "Upload an image, returns its URL",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file (jpg/png/webp/gif)",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1472,6 +1577,10 @@ const docTemplate = `{
                 "cost_price": {
                     "type": "number",
                     "minimum": 0
+                },
+                "image": {
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "is_active": {
                     "type": "boolean"
@@ -1847,6 +1956,10 @@ const docTemplate = `{
                 "cost_price": {
                     "type": "number",
                     "minimum": 0
+                },
+                "image": {
+                    "type": "string",
+                    "maxLength": 255
                 },
                 "is_active": {
                     "type": "boolean"

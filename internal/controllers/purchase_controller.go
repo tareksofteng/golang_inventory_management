@@ -133,3 +133,28 @@ func (ctrl *PurchaseController) Get(c *gin.Context) {
 	}
 	response.Success(c, "Purchase fetched successfully", purchase)
 }
+
+// Delete godoc
+// @Summary  Void a purchase (reverses stock + supplier due, transactional)
+// @Tags     Purchases
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Purchase ID"
+// @Success  200  {object}  map[string]interface{}
+// @Router   /purchases/{id} [delete]
+func (ctrl *PurchaseController) Delete(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid purchase id", nil)
+		return
+	}
+	if err := ctrl.service.Delete(id); err != nil {
+		if errors.Is(err, services.ErrPurchaseNotFound) {
+			response.NotFound(c, "Purchase not found")
+			return
+		}
+		response.InternalError(c, "Failed to void purchase")
+		return
+	}
+	response.Success(c, "Purchase voided successfully", nil)
+}

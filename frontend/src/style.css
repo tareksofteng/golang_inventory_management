@@ -34,3 +34,24 @@
     @apply inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 }
+
+/* Print: show only the invoice (.printable), hide everything else. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable,
+  .printable * {
+    visibility: visible;
+  }
+  .printable {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    width: 100%;
+    box-shadow: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

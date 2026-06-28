@@ -136,3 +136,28 @@ func (ctrl *SaleController) Get(c *gin.Context) {
 	}
 	response.Success(c, "Sale fetched successfully", sale)
 }
+
+// Delete godoc
+// @Summary  Void a sale (returns stock + reverses customer due, transactional)
+// @Tags     Sales
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Sale ID"
+// @Success  200  {object}  map[string]interface{}
+// @Router   /sales/{id} [delete]
+func (ctrl *SaleController) Delete(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid sale id", nil)
+		return
+	}
+	if err := ctrl.service.Delete(id); err != nil {
+		if errors.Is(err, services.ErrSaleNotFound) {
+			response.NotFound(c, "Sale not found")
+			return
+		}
+		response.InternalError(c, "Failed to void sale")
+		return
+	}
+	response.Success(c, "Sale voided successfully", nil)
+}

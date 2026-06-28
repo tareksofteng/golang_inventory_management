@@ -24,6 +24,7 @@ type Controllers struct {
 	Payment   *controllers.PaymentController
 	Return    *controllers.ReturnController
 	Ledger    *controllers.LedgerController
+	Upload    *controllers.UploadController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -45,6 +46,7 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	protected.Use(middleware.Auth(tm))
 
 	protected.GET("/auth/me", c.Auth.Me)
+	protected.POST("/uploads", middleware.RequirePermission(rbac.PermProductManage), c.Upload.Upload)
 
 	// Dashboard is visible to every authenticated user (no extra permission).
 	protected.GET("/dashboard/summary", c.Dashboard.Summary)
@@ -111,6 +113,7 @@ func registerSaleRoutes(rg *gin.RouterGroup, ctrl *controllers.SaleController) {
 		g.POST("", ctrl.Create) // create invoice -> stock out + customer due (transaction)
 		g.GET("", ctrl.List)
 		g.GET("/:id", ctrl.Get)
+		g.DELETE("/:id", ctrl.Delete) // void -> return stock + reverse due
 	}
 }
 
@@ -121,6 +124,7 @@ func registerPurchaseRoutes(rg *gin.RouterGroup, ctrl *controllers.PurchaseContr
 		g.POST("", ctrl.Create) // create invoice -> stock in + supplier due (transaction)
 		g.GET("", ctrl.List)
 		g.GET("/:id", ctrl.Get)
+		g.DELETE("/:id", ctrl.Delete) // void -> reverse stock + due
 	}
 }
 

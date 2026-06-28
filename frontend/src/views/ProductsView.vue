@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '../lib/api'
+import api, { assetUrl } from '../lib/api'
 import CrudPage from '../components/CrudPage.vue'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
@@ -16,7 +16,13 @@ const stockBadge = (r) => {
   return `<span class="badge ${cls}">${r.quantity} ${r.unit || ''}</span>`
 }
 
+const imgCell = (r) =>
+  r.image
+    ? `<img src="${assetUrl(r.image)}" class="h-10 w-10 rounded-lg object-cover border border-slate-200" />`
+    : `<div class="h-10 w-10 rounded-lg bg-slate-100 grid place-items-center text-[9px] text-slate-400 dark:bg-slate-700">IMG</div>`
+
 const columns = [
+  { key: 'image', label: '', render: imgCell },
   { key: 'name', label: 'Name' },
   { key: 'sku', label: 'SKU' },
   { key: 'category', label: 'Category', render: (r) => r.category?.name || '—' },
@@ -26,6 +32,7 @@ const columns = [
 
 // fields is computed so the select options appear once categories/suppliers load.
 const fields = computed(() => [
+  { key: 'image', label: 'Product Image', type: 'image' },
   { key: 'name', label: 'Name', type: 'text', required: true },
   { key: 'sku', label: 'SKU', type: 'text', required: true },
   { key: 'category_id', label: 'Category', type: 'select', options: categoryOptions.value },
@@ -38,6 +45,7 @@ const fields = computed(() => [
 ])
 
 const newItem = () => ({
+  image: '',
   name: '',
   sku: '',
   category_id: categoryOptions.value[0]?.value || '',

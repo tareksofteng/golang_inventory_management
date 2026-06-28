@@ -1,7 +1,24 @@
 <script setup>
 import { ref, reactive, watch, onMounted } from 'vue'
-import api from '../lib/api'
+import api, { assetUrl } from '../lib/api'
 import Modal from './Modal.vue'
+
+const uploading = ref(false)
+async function onFileChange(field, e) {
+  const file = e.target.files[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const { data } = await api.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    form[field.key] = data.data.url
+  } catch (err) {
+    formError.value = err.response?.data?.message || 'Image upload failed'
+  } finally {
+    uploading.value = false
+  }
+}
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -169,6 +186,15 @@ defineExpose({ load })
             <input v-model="form[f.key]" type="checkbox" class="h-4 w-4 rounded" />
             <span class="text-sm text-slate-500">{{ f.hint || 'Active' }}</span>
           </label>
+
+          <div v-else-if="f.type === 'image'" class="flex items-center gap-3">
+            <img v-if="form[f.key]" :src="assetUrl(form[f.key])" class="h-16 w-16 rounded-lg border border-slate-200 object-cover dark:border-slate-600" />
+            <div v-else class="grid h-16 w-16 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400 dark:bg-slate-700">No image</div>
+            <label class="btn-ghost cursor-pointer text-sm">
+              {{ uploading ? 'Uploading…' : 'Choose image' }}
+              <input type="file" accept="image/*" class="hidden" @change="(e) => onFileChange(f, e)" />
+            </label>
+          </div>
 
           <input
             v-else

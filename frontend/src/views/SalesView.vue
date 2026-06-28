@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import api from '../lib/api'
+import api, { assetUrl } from '../lib/api'
 import Modal from '../components/Modal.vue'
 import ProductPicker from '../components/ProductPicker.vue'
+import InvoiceModal from '../components/InvoiceModal.vue'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
@@ -13,6 +14,9 @@ const loading = ref(false)
 
 const customers = ref([])
 const products = ref([])
+
+const invoiceId = ref(null)
+const selectedCustomer = computed(() => customers.value.find((c) => c.id === Number(form.customer_id)))
 
 const showModal = ref(false)
 const saving = ref(false)
@@ -54,9 +58,16 @@ function addProduct(p) {
     existing.quantity++
     return
   }
-  form.items.push({ product_id: p.id, name: p.name, sku: p.sku, stock: p.quantity, quantity: 1, unit_price: p.price || 0 })
+  form.items.push({ product_id: p.id, name: p.name, sku: p.sku, image: p.image, stock: p.quantity, quantity: 1, unit_price: p.price || 0 })
 }
 const removeRow = (i) => form.items.splice(i, 1)
+
+async function voidSale(s) {
+  if (!confirm(`Void sale ${s.invoice_no}? This returns its stock and reverses the customer due.`)) return
+  await api.delete(`/sales/${s.id}`)
+  if (sales.value.length === 1 && page.value > 1) page.value--
+  load()
+}
 
 async function save() {
   if (!form.items.length) {
@@ -114,11 +125,12 @@ onMounted(async () => {
               <th class="px-4 py-3">Invoice</th><th class="px-4 py-3">Customer</th>
               <th class="px-4 py-3">Total</th><th class="px-4 py-3">Paid</th>
               <th class="px-4 py-3">Due</th><th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-            <tr v-if="loading"><td colspan="6" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
-            <tr v-else-if="!sales.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">No sales yet</td></tr>
+            <tr v-if="loading"><td colspan="7" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
+            <tr v-else-if="!sales.length"><td colspan="7" class="px-4 py-10 text-center text-slate-400">No sales yet</td></tr>
             <tr v-for="s in sales" :key="s.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ s.invoice_no }}</td>
               <td class="px-4 py-3">{{ s.customer?.name }}</td>
@@ -129,6 +141,10 @@ onMounted(async () => {
                 <span v-else class="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Paid</span>
               </td>
               <td class="px-4 py-3 text-slate-400">{{ new Date(s.created_at).toLocaleDateString() }}</td>
+              <td class="px-4 py-3 text-right">
+                <button class="btn-ghost !px-2 !py-1 text-xs" @click="invoiceId = s.id">Invoice</button>
+                <button class="btn-danger !px-2 !py-1 text-xs" @click="voidSale(s)">Void</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -152,6 +168,11 @@ onMounted(async () => {
             <select v-model="form.customer_id" class="input">
               <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
             </select>
+            <div v-if="selectedCustomer" class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-700/40">
+              <span v-if="selectedCustomer.phone">📞 {{ selectedCustomer.phone }}</span>
+              <span v-if="selectedCustomer.address"> · 📍 {{ selectedCustomer.address }}</span>
+              <span v-if="selectedCustomer.due > 0" class="text-amber-600"> · Due: {{ money(selectedCustomer.due) }}</span>
+            </div>
           </div>
           <div>
             <label class="label">Add Product</label>
@@ -174,8 +195,14 @@ onMounted(async () => {
               <tr v-if="!form.items.length"><td colspan="5" class="px-3 py-6 text-center text-slate-400">Search and add products above</td></tr>
               <tr v-for="(it, i) in form.items" :key="it.product_id">
                 <td class="px-3 py-2">
-                  <div class="font-medium">{{ it.name }}</div>
-                  <div class="text-xs" :class="it.quantity > it.stock ? 'text-red-500' : 'text-slate-400'">{{ it.sku }} · stock {{ it.stock }}</div>
+                  <div class="flex items-center gap-2">
+                    <img v-if="it.image" :src="assetUrl(it.image)" class="h-8 w-8 rounded border border-slate-200 object-cover" />
+                    <span v-else class="grid h-8 w-8 place-items-center rounded bg-slate-100 text-[9px] text-slate-400 dark:bg-slate-600">IMG</span>
+                    <div>
+                      <div class="font-medium">{{ it.name }}</div>
+                      <div class="text-xs" :class="it.quantity > it.stock ? 'text-red-500' : 'text-slate-400'">{{ it.sku }} · stock {{ it.stock }}</div>
+                    </div>
+                  </div>
                 </td>
                 <td class="px-3 py-2"><input v-model.number="it.quantity" type="number" min="1" :max="it.stock" class="input !py-1.5" /></td>
                 <td class="px-3 py-2"><input v-model.number="it.unit_price" type="number" min="0" class="input !py-1.5" /></td>
@@ -227,5 +254,7 @@ onMounted(async () => {
         </div>
       </form>
     </Modal>
+
+    <InvoiceModal v-if="invoiceId" type="sale" :id="invoiceId" @close="invoiceId = null" />
   </div>
 </template>

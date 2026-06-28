@@ -18,6 +18,7 @@ type SaleRepository interface {
 	CountAll() (int64, error)
 	FindAll(search string, offset, limit int) ([]models.Sale, int64, error)
 	FindByID(id uint) (*models.Sale, error)
+	Delete(id uint) error
 }
 
 type saleRepository struct {
@@ -107,4 +108,33 @@ func (r *saleRepository) FindByID(id uint) (*models.Sale, error) {
 		return nil, err
 	}
 	return &sale, nil
+}
+
+// Delete VOIDS a sale: in one transaction it returns the stock it removed and
+// reverses the customer due it created, then soft-deletes the invoice + items.
+func (r *saleRepository) Delete(id uint) error {
+	var s models.Sale
+	if err := r.db.Preload("Items").First(&s, id).Error; err != nil {
+		return err
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, it := range s.Items {
+			err := tx.Model(&models.Product{}).Where("id = ?", it.ProductID).
+				Update("quantity", gorm.Expr("quantity + ?", it.Quantity)).Error
+			if err != nil {
+				return err
+			}
+		}
+		if s.Due > 0 {
+			err := tx.Model(&models.Customer{}).Where("id = ?", s.CustomerID).
+				Update("due", gorm.Expr("GREATEST(due - ?, 0)", s.Due)).Error
+			if err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("sale_id = ?", s.ID).Delete(&models.SaleItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Sale{}, s.ID).Error
+	})
 }

@@ -38,6 +38,7 @@ type PurchaseService interface {
 	Create(input CreatePurchaseInput) (*models.Purchase, error)
 	List(search string, page, perPage int) ([]models.Purchase, int64, error)
 	Get(id uint) (*models.Purchase, error)
+	Delete(id uint) error
 }
 
 type purchaseService struct {
@@ -140,4 +141,14 @@ func (s *purchaseService) Get(id uint) (*models.Purchase, error) {
 		return nil, err
 	}
 	return purchase, nil
+}
+
+func (s *purchaseService) Delete(id uint) error {
+	if err := s.repo.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrPurchaseNotFound
+		}
+		return err
+	}
+	return nil
 }

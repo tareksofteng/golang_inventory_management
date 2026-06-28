@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { assetUrl } from '../lib/api'
 
 const props = defineProps({
   products: { type: Array, default: () => [] },
@@ -16,16 +17,16 @@ const filtered = computed(() => {
         (p) => p.name.toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q),
       )
     : props.products
-  return list.slice(0, 8)
+  return list.slice(0, 12)
 })
 
 function pick(p) {
   emit('select', p)
   query.value = ''
-  open.value = false
+  // Keep the list open + input focused so several products can be added fast.
+  open.value = true
 }
 
-// Small delay so a click on an option registers before blur closes the list.
 const close = () => setTimeout(() => (open.value = false), 150)
 </script>
 
@@ -40,23 +41,29 @@ const close = () => setTimeout(() => (open.value = false), 150)
         class="input pl-9"
         placeholder="Search a product by name or SKU to add…"
         @focus="open = true"
+        @input="open = true"
         @blur="close"
       />
     </div>
 
     <div
       v-if="open && filtered.length"
-      class="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-600 dark:bg-slate-700"
+      class="absolute z-30 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-600 dark:bg-slate-700"
     >
       <button
         v-for="p in filtered"
         :key="p.id"
         type="button"
-        class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-600"
+        class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-600"
         @mousedown.prevent="pick(p)"
       >
-        <span class="font-medium">{{ p.name }}</span>
-        <span class="shrink-0 text-xs text-slate-400">{{ p.sku }} · stock {{ p.quantity }}</span>
+        <img v-if="p.image" :src="assetUrl(p.image)" class="h-9 w-9 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-slate-600" />
+        <span v-else class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400 dark:bg-slate-600">IMG</span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate font-medium">{{ p.name }}</span>
+          <span class="block truncate text-xs text-slate-400">{{ p.sku }}</span>
+        </span>
+        <span class="shrink-0 text-xs text-slate-400">stock {{ p.quantity }}</span>
       </button>
     </div>
   </div>

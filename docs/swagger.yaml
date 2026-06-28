@@ -44,6 +44,9 @@ definitions:
       cost_price:
         minimum: 0
         type: number
+      image:
+        maxLength: 255
+        type: string
       is_active:
         type: boolean
       name:
@@ -310,6 +313,9 @@ definitions:
       cost_price:
         minimum: 0
         type: number
+      image:
+        maxLength: 255
+        type: string
       is_active:
         type: boolean
       name:
@@ -854,6 +860,27 @@ paths:
       summary: Create a purchase invoice (increases stock + supplier due, transactional)
       tags:
       - Purchases
+  /purchases/{id}:
+    delete:
+      parameters:
+      - description: Purchase ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Void a purchase (reverses stock + supplier due, transactional)
+      tags:
+      - Purchases
   /reports/customer-due:
     get:
       produces:
@@ -1108,6 +1135,27 @@ paths:
         oversell-guarded)
       tags:
       - Sales
+  /sales/{id}:
+    delete:
+      parameters:
+      - description: Sale ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Void a sale (returns stock + reverses customer due, transactional)
+      tags:
+      - Sales
   /suppliers:
     get:
       parameters:
@@ -1159,6 +1207,29 @@ paths:
       summary: Create a supplier
       tags:
       - Suppliers
+  /uploads:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Image file (jpg/png/webp/gif)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload an image, returns its URL
+      tags:
+      - Uploads
   /users:
     get:
       parameters:

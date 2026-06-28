@@ -126,6 +126,7 @@ func (s *productService) Update(id uint, data *models.Product) (*models.Product,
 
 	existing.Name = data.Name
 	existing.SKU = data.SKU
+	existing.Image = data.Image
 	existing.CategoryID = data.CategoryID
 	existing.SupplierID = data.SupplierID
 	existing.Price = data.Price

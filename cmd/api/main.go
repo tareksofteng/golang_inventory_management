@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"inventory-api/config"
 	_ "inventory-api/docs" // generated swagger docs
@@ -69,6 +70,10 @@ func main() {
 	//    the whole server — like Laravel's exception handler).
 	router := gin.Default()
 	router.Use(middleware.CORS()) // allow the Vue frontend to call the API
+
+	// Serve uploaded images at /uploads/... (created on startup if missing).
+	_ = os.MkdirAll("uploads", 0o755)
+	router.Static("/uploads", "./uploads")
 
 	// Swagger UI at /swagger/index.html (interactive API documentation).
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -143,6 +148,8 @@ func main() {
 	ledgerService := services.NewLedgerService(ledgerRepo, customerRepo, supplierRepo)
 	ledgerController := controllers.NewLedgerController(ledgerService)
 
+	uploadController := controllers.NewUploadController()
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
 		Auth:      authController,
@@ -158,6 +165,7 @@ func main() {
 		Payment:   paymentController,
 		Return:    returnController,
 		Ledger:    ledgerController,
+		Upload:    uploadController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

@@ -72,4 +72,13 @@ api.interceptors.response.use(
   },
 )
 
+// assetUrl turns a relative upload path (/uploads/x.jpg) into a full URL on the
+// API host, since images are served by the Go server, not the Vite dev server.
+export function assetUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  const base = (import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, '')
+  return base + path
+}
+
 export default api

@@ -35,6 +35,7 @@ type SaleService interface {
 	Create(input CreateSaleInput) (*models.Sale, error)
 	List(search string, page, perPage int) ([]models.Sale, int64, error)
 	Get(id uint) (*models.Sale, error)
+	Delete(id uint) error
 }
 
 type saleService struct {
@@ -143,4 +144,14 @@ func (s *saleService) Get(id uint) (*models.Sale, error) {
 		return nil, err
 	}
 	return sale, nil
+}
+
+func (s *saleService) Delete(id uint) error {
+	if err := s.repo.Delete(id); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrSaleNotFound
+		}
+		return err
+	}
+	return nil
 }

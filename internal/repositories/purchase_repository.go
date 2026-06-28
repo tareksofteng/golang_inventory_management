@@ -12,6 +12,7 @@ type PurchaseRepository interface {
 	CountAll() (int64, error)
 	FindAll(search string, offset, limit int) ([]models.Purchase, int64, error)
 	FindByID(id uint) (*models.Purchase, error)
+	Delete(id uint) error
 }
 
 type purchaseRepository struct {
@@ -106,4 +107,34 @@ func (r *purchaseRepository) FindByID(id uint) (*models.Purchase, error) {
 		return nil, err
 	}
 	return &purchase, nil
+}
+
+// Delete VOIDS a purchase: in one transaction it reverses the stock it added
+// (clamped so it can't go negative) and the supplier due it created, then
+// soft-deletes the invoice + its items.
+func (r *purchaseRepository) Delete(id uint) error {
+	var p models.Purchase
+	if err := r.db.Preload("Items").First(&p, id).Error; err != nil {
+		return err
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for _, it := range p.Items {
+			err := tx.Model(&models.Product{}).Where("id = ?", it.ProductID).
+				Update("quantity", gorm.Expr("GREATEST(quantity - ?, 0)", it.Quantity)).Error
+			if err != nil {
+				return err
+			}
+		}
+		if p.Due > 0 {
+			err := tx.Model(&models.Supplier{}).Where("id = ?", p.SupplierID).
+				Update("due", gorm.Expr("GREATEST(due - ?, 0)", p.Due)).Error
+			if err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("purchase_id = ?", p.ID).Delete(&models.PurchaseItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.Purchase{}, p.ID).Error
+	})
 }
