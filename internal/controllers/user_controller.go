@@ -12,17 +12,19 @@ import (
 )
 
 type CreateUserRequest struct {
-	Name     string `json:"name" binding:"required,min=2,max=100"`
-	Email    string `json:"email" binding:"required,email,max=100"`
-	Password string `json:"password" binding:"required,min=6,max=72"`
-	Role     string `json:"role" binding:"required,oneof=super_admin admin manager salesman"`
+	Name        string   `json:"name" binding:"required,min=2,max=100"`
+	Email       string   `json:"email" binding:"required,email,max=100"`
+	Password    string   `json:"password" binding:"required,min=6,max=72"`
+	Role        string   `json:"role" binding:"required,oneof=super_admin admin manager salesman"`
+	Permissions []string `json:"permissions"`
 }
 
 type UpdateUserRequest struct {
-	Name     string `json:"name" binding:"required,min=2,max=100"`
-	Email    string `json:"email" binding:"required,email,max=100"`
-	Role     string `json:"role" binding:"required,oneof=super_admin admin manager salesman"`
-	IsActive *bool  `json:"is_active"`
+	Name        string   `json:"name" binding:"required,min=2,max=100"`
+	Email       string   `json:"email" binding:"required,email,max=100"`
+	Role        string   `json:"role" binding:"required,oneof=super_admin admin manager salesman"`
+	Permissions []string `json:"permissions"`
+	IsActive    *bool    `json:"is_active"`
 }
 
 type ChangePasswordRequest struct {
@@ -45,6 +47,8 @@ func handleUserWriteError(c *gin.Context, err error, action string) {
 		response.Error(c, http.StatusConflict, err.Error(), nil)
 	case errors.Is(err, services.ErrInvalidRole):
 		response.Error(c, http.StatusUnprocessableEntity, err.Error(), nil)
+	case errors.Is(err, services.ErrInvalidPermission):
+		response.Error(c, http.StatusUnprocessableEntity, err.Error(), nil)
 	default:
 		response.InternalError(c, "Failed to "+action+" user")
 	}
@@ -66,7 +70,7 @@ func (ctrl *UserController) Create(c *gin.Context) {
 		return
 	}
 
-	user, err := ctrl.service.Create(req.Name, req.Email, req.Password, req.Role)
+	user, err := ctrl.service.Create(req.Name, req.Email, req.Password, req.Role, req.Permissions)
 	if err != nil {
 		handleUserWriteError(c, err, "create")
 		return
@@ -139,7 +143,7 @@ func (ctrl *UserController) Update(c *gin.Context) {
 		isActive = *req.IsActive
 	}
 
-	user, err := ctrl.service.Update(id, req.Name, req.Email, req.Role, isActive)
+	user, err := ctrl.service.Update(id, req.Name, req.Email, req.Role, isActive, req.Permissions)
 	if err != nil {
 		handleUserWriteError(c, err, "update")
 		return

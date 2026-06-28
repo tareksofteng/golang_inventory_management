@@ -1805,6 +1805,12 @@ const docTemplate = `{
                     "maxLength": 72,
                     "minLength": 6
                 },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "role": {
                     "type": "string",
                     "enum": [

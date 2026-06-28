@@ -187,6 +187,17 @@ defineExpose({ load })
             <span class="text-sm text-slate-500">{{ f.hint || 'Active' }}</span>
           </label>
 
+          <div v-else-if="f.type === 'checkboxes'" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label
+              v-for="opt in f.options"
+              :key="opt.value"
+              class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm transition hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-700/40"
+            >
+              <input v-model="form[f.key]" type="checkbox" :value="opt.value" class="h-4 w-4 rounded text-brand-600" />
+              {{ opt.label }}
+            </label>
+          </div>
+
           <div v-else-if="f.type === 'image'" class="flex items-center gap-3">
             <img v-if="form[f.key]" :src="assetUrl(form[f.key])" class="h-16 w-16 rounded-lg border border-slate-200 object-cover dark:border-slate-600" />
             <div v-else class="grid h-16 w-16 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400 dark:bg-slate-700">No image</div>

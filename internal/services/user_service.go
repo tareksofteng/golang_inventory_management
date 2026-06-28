@@ -17,13 +17,29 @@ var (
 	ErrInvalidRole    = errors.New("invalid role")
 )
 
+var ErrInvalidPermission = errors.New("invalid permission")
+
 type UserService interface {
-	Create(name, email, password, role string) (*models.User, error)
+	Create(name, email, password, role string, permissions []string) (*models.User, error)
 	List(search string, page, perPage int) ([]models.User, int64, error)
 	Get(id uint) (*models.User, error)
-	Update(id uint, name, email, role string, isActive bool) (*models.User, error)
+	Update(id uint, name, email, role string, isActive bool, permissions []string) (*models.User, error)
 	ChangePassword(id uint, newPassword string) error
 	Disable(id uint) error
+}
+
+// normalizePermissions validates each permission and, when none are given,
+// falls back to the role's default set.
+func normalizePermissions(role string, permissions []string) ([]string, error) {
+	for _, p := range permissions {
+		if !rbac.IsValidPermission(p) {
+			return nil, ErrInvalidPermission
+		}
+	}
+	if len(permissions) == 0 {
+		return rbac.EffectivePermissions(role, nil), nil
+	}
+	return permissions, nil
 }
 
 type userService struct {
@@ -35,9 +51,13 @@ func NewUserService(repo repositories.UserRepository, refreshRepo repositories.R
 	return &userService{repo: repo, refreshRepo: refreshRepo}
 }
 
-func (s *userService) Create(name, email, password, role string) (*models.User, error) {
+func (s *userService) Create(name, email, password, role string, permissions []string) (*models.User, error) {
 	if !rbac.IsValidRole(rbac.Role(role)) {
 		return nil, ErrInvalidRole
+	}
+	perms, err := normalizePermissions(role, permissions)
+	if err != nil {
+		return nil, err
 	}
 
 	exists, err := s.repo.ExistsByEmail(email, 0)
@@ -54,11 +74,12 @@ func (s *userService) Create(name, email, password, role string) (*models.User, 
 	}
 
 	user := &models.User{
-		Name:     name,
-		Email:    email,
-		Password: hash,
-		Role:     role,
-		IsActive: true,
+		Name:        name,
+		Email:       email,
+		Password:    hash,
+		Role:        role,
+		Permissions: perms,
+		IsActive:    true,
 	}
 	if err := s.repo.Create(user); err != nil {
 		return nil, err
@@ -82,9 +103,13 @@ func (s *userService) Get(id uint) (*models.User, error) {
 	return user, nil
 }
 
-func (s *userService) Update(id uint, name, email, role string, isActive bool) (*models.User, error) {
+func (s *userService) Update(id uint, name, email, role string, isActive bool, permissions []string) (*models.User, error) {
 	if !rbac.IsValidRole(rbac.Role(role)) {
 		return nil, ErrInvalidRole
+	}
+	perms, err := normalizePermissions(role, permissions)
+	if err != nil {
+		return nil, err
 	}
 
 	existing, err := s.Get(id)
@@ -103,6 +128,7 @@ func (s *userService) Update(id uint, name, email, role string, isActive bool) (
 	existing.Name = name
 	existing.Email = email
 	existing.Role = role
+	existing.Permissions = perms
 	existing.IsActive = isActive
 
 	if err := s.repo.Update(existing); err != nil {

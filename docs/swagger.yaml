@@ -189,6 +189,10 @@ definitions:
         maxLength: 72
         minLength: 6
         type: string
+      permissions:
+        items:
+          type: string
+        type: array
       role:
         enum:
         - super_admin

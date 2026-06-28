@@ -33,6 +33,36 @@ var rolePermissions = map[Role][]Permission{
 	RoleSalesman:   {PermSalesManage},
 }
 
+// AllPermissions lists every permission the system knows about (for building
+// the user permission checkboxes).
+func AllPermissions() []Permission {
+	return []Permission{PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermUserManage}
+}
+
+// IsValidPermission reports whether p is a known permission string.
+func IsValidPermission(p string) bool {
+	for _, perm := range AllPermissions() {
+		if string(perm) == p {
+			return true
+		}
+	}
+	return false
+}
+
+// EffectivePermissions returns a user's actual permissions: the explicit custom
+// list if set, otherwise the defaults for their role.
+func EffectivePermissions(role string, custom []string) []string {
+	if len(custom) > 0 {
+		return custom
+	}
+	perms := rolePermissions[Role(role)]
+	out := make([]string, len(perms))
+	for i, p := range perms {
+		out[i] = string(p)
+	}
+	return out
+}
+
 // IsValidRole reports whether r is one of the known roles (used in validation).
 func IsValidRole(r Role) bool {
 	_, ok := rolePermissions[r]

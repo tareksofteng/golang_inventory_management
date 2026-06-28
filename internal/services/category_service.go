@@ -68,6 +68,7 @@ func (s *categoryService) Get(id uint) (*models.Category, error) {
 		}
 		return nil, err
 	}
+
 	return category, nil
 }
 

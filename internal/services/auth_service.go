@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"inventory-api/internal/models"
+	"inventory-api/internal/rbac"
 	"inventory-api/internal/repositories"
 	"inventory-api/pkg/auth"
 
@@ -103,7 +104,8 @@ func (s *authService) Logout(refreshToken string) error {
 
 // issueTokens generates an access JWT plus a persisted (hashed) refresh token.
 func (s *authService) issueTokens(user *models.User) (string, string, error) {
-	access, err := s.tokens.GenerateAccessToken(user.ID, user.Role)
+	perms := rbac.EffectivePermissions(user.Role, user.Permissions)
+	access, err := s.tokens.GenerateAccessToken(user.ID, user.Role, perms)
 	if err != nil {
 		return "", "", err
 	}

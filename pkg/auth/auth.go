@@ -35,8 +35,9 @@ func CheckPassword(hash, plain string) bool {
 // Claims is the payload carried inside an access token. uid + role let the
 // auth/RBAC middleware authorize a request WITHOUT a DB lookup.
 type Claims struct {
-	UserID uint   `json:"uid"`
-	Role   string `json:"role"`
+	UserID      uint     `json:"uid"`
+	Role        string   `json:"role"`
+	Permissions []string `json:"perms"`
 	jwt.RegisteredClaims
 }
 
@@ -60,12 +61,14 @@ func NewTokenManager(secret string, accessTTLMinutes, refreshTTLHours int) *Toke
 // expiry consistently.
 func (tm *TokenManager) RefreshTTL() time.Duration { return tm.refreshTTL }
 
-// GenerateAccessToken signs a short-lived JWT for the given user + role.
-func (tm *TokenManager) GenerateAccessToken(userID uint, role string) (string, error) {
+// GenerateAccessToken signs a short-lived JWT for the given user, role and
+// effective permissions.
+func (tm *TokenManager) GenerateAccessToken(userID uint, role string, permissions []string) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID: userID,
-		Role:   role,
+		UserID:      userID,
+		Role:        role,
+		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(tm.accessTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),

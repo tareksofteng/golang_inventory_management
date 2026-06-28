@@ -68,7 +68,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		"user":          user,
 		"access_token":  access,
 		"refresh_token": refresh,
-		"permissions":   rbac.Permissions(rbac.Role(user.Role)),
+		"permissions":   rbac.EffectivePermissions(user.Role, user.Permissions),
 	})
 }
 
@@ -144,6 +144,6 @@ func (ctrl *AuthController) Me(c *gin.Context) {
 	}
 	response.Success(c, "Profile fetched", gin.H{
 		"user":        user,
-		"permissions": rbac.Permissions(rbac.Role(user.Role)),
+		"permissions": rbac.EffectivePermissions(user.Role, user.Permissions),
 	})
 }
