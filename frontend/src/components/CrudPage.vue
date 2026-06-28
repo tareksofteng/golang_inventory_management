@@ -64,9 +64,19 @@ async function load() {
   }
 }
 
+// normalizeForm guarantees multi-checkbox fields are always arrays, even when
+// the API returns null (e.g. records created before the field existed) — vital
+// because Vue treats a non-array v-model on a checkbox group as a single bool.
+function normalizeForm() {
+  for (const f of props.fields) {
+    if (f.type === 'checkboxes' && !Array.isArray(form[f.key])) form[f.key] = []
+  }
+}
+
 function openCreate() {
   editingId.value = null
   Object.assign(form, props.newItem())
+  normalizeForm()
   formError.value = ''
   fieldErrors.value = {}
   showModal.value = true
@@ -75,6 +85,7 @@ function openCreate() {
 function openEdit(row) {
   editingId.value = row.id
   Object.assign(form, props.newItem(), row)
+  normalizeForm()
   formError.value = ''
   fieldErrors.value = {}
   showModal.value = true
