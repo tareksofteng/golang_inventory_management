@@ -24,6 +24,8 @@ type SaleItemInput struct {
 type CreateSaleInput struct {
 	CustomerID uint
 	UserID     uint
+	Discount   float64
+	TaxPercent float64
 	PaidAmount float64
 	Note       string
 	Items      []SaleItemInput
@@ -65,7 +67,7 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 	// friendly pre-check of stock here so the common case returns a clear
 	// message; the repository's transaction is still the authoritative,
 	// race-safe guard.
-	var total float64
+	var subtotal float64
 	items := make([]models.SaleItem, 0, len(input.Items))
 	for _, in := range input.Items {
 		if in.Quantity <= 0 {
@@ -82,17 +84,18 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 			return nil, ErrInsufficientStock
 		}
 
-		subtotal := float64(in.Quantity) * in.UnitPrice
-		total += subtotal
+		lineTotal := float64(in.Quantity) * in.UnitPrice
+		subtotal += lineTotal
 		items = append(items, models.SaleItem{
 			ProductID: in.ProductID,
 			Quantity:  in.Quantity,
 			UnitPrice: in.UnitPrice,
-			Subtotal:  subtotal,
+			Subtotal:  lineTotal,
 		})
 	}
 
-	if input.PaidAmount > total {
+	discount, taxAmount, grandTotal := computeTotals(subtotal, input.Discount, input.TaxPercent)
+	if input.PaidAmount > grandTotal {
 		return nil, ErrPaidExceedsTotal
 	}
 
@@ -105,9 +108,13 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 		InvoiceNo:   fmt.Sprintf("SAL-%06d", count+1),
 		CustomerID:  input.CustomerID,
 		UserID:      input.UserID,
-		TotalAmount: total,
+		Subtotal:    subtotal,
+		Discount:    discount,
+		TaxPercent:  input.TaxPercent,
+		TaxAmount:   taxAmount,
+		TotalAmount: grandTotal,
 		PaidAmount:  input.PaidAmount,
-		Due:         total - input.PaidAmount,
+		Due:         grandTotal - input.PaidAmount,
 		Note:        input.Note,
 		Items:       items,
 	}

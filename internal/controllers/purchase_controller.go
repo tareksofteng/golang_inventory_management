@@ -20,6 +20,8 @@ type PurchaseItemRequest struct {
 
 type CreatePurchaseRequest struct {
 	SupplierID uint                  `json:"supplier_id" binding:"required"`
+	Discount   float64               `json:"discount" binding:"gte=0"`
+	TaxPercent float64               `json:"tax_percent" binding:"gte=0"`
 	PaidAmount float64               `json:"paid_amount" binding:"gte=0"`
 	Note       string                `json:"note" binding:"max=255"`
 	Items      []PurchaseItemRequest `json:"items" binding:"required,min=1,dive"`
@@ -61,6 +63,8 @@ func (ctrl *PurchaseController) Create(c *gin.Context) {
 	purchase, err := ctrl.service.Create(services.CreatePurchaseInput{
 		SupplierID: req.SupplierID,
 		UserID:     middleware.UserID(c), // who is logged in
+		Discount:   req.Discount,
+		TaxPercent: req.TaxPercent,
 		PaidAmount: req.PaidAmount,
 		Note:       req.Note,
 		Items:      items,

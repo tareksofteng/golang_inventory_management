@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import api from '../lib/api'
 import Modal from '../components/Modal.vue'
+import ProductPicker from '../components/ProductPicker.vue'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
@@ -12,16 +13,18 @@ const loading = ref(false)
 
 const customers = ref([])
 const products = ref([])
-const productMap = computed(() => Object.fromEntries(products.value.map((p) => [p.id, p])))
 
 const showModal = ref(false)
 const saving = ref(false)
 const formError = ref('')
-const form = reactive({ customer_id: '', paid_amount: 0, note: '', items: [] })
+const form = reactive({ customer_id: '', discount: 0, tax_percent: 0, paid_amount: 0, note: '', items: [] })
 
-const total = computed(() =>
-  form.items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0),
-)
+const subtotal = computed(() => form.items.reduce((s, it) => s + Number(it.quantity || 0) * Number(it.unit_price || 0), 0))
+const discount = computed(() => Math.min(Math.max(Number(form.discount) || 0, 0), subtotal.value))
+const taxable = computed(() => subtotal.value - discount.value)
+const taxAmount = computed(() => (taxable.value * (Number(form.tax_percent) || 0)) / 100)
+const grandTotal = computed(() => taxable.value + taxAmount.value)
+const due = computed(() => grandTotal.value - (Number(form.paid_amount) || 0))
 
 async function load() {
   loading.value = true
@@ -34,35 +37,40 @@ async function load() {
   }
 }
 
-const newRow = () => {
-  const p = products.value[0]
-  return { product_id: p?.id || '', quantity: 1, unit_price: p?.price || 0 }
-}
-
 function openCreate() {
   form.customer_id = customers.value[0]?.id || ''
+  form.discount = 0
+  form.tax_percent = 0
   form.paid_amount = 0
   form.note = ''
-  form.items = [newRow()]
+  form.items = []
   formError.value = ''
   showModal.value = true
 }
-const addRow = () => form.items.push(newRow())
+
+function addProduct(p) {
+  const existing = form.items.find((it) => it.product_id === p.id)
+  if (existing) {
+    existing.quantity++
+    return
+  }
+  form.items.push({ product_id: p.id, name: p.name, sku: p.sku, stock: p.quantity, quantity: 1, unit_price: p.price || 0 })
+}
 const removeRow = (i) => form.items.splice(i, 1)
 
-// When the product changes, prefill the selling price from the product.
-function onProductChange(it) {
-  const p = productMap.value[it.product_id]
-  if (p) it.unit_price = p.price
-}
-
 async function save() {
+  if (!form.items.length) {
+    formError.value = 'Add at least one product'
+    return
+  }
   saving.value = true
   formError.value = ''
   try {
     await api.post('/sales', {
       customer_id: Number(form.customer_id),
-      paid_amount: Number(form.paid_amount),
+      discount: discount.value,
+      tax_percent: Number(form.tax_percent) || 0,
+      paid_amount: Number(form.paid_amount) || 0,
       note: form.note,
       items: form.items.map((it) => ({
         product_id: Number(it.product_id),
@@ -134,53 +142,86 @@ onMounted(async () => {
       </div>
     </div>
 
-    <Modal v-if="showModal" title="New Sale" @close="showModal = false">
-      <form class="space-y-4" @submit.prevent="save">
+    <Modal v-if="showModal" title="New Sale" size="max-w-4xl" @close="showModal = false">
+      <form class="space-y-5" @submit.prevent="save">
         <div v-if="formError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10">{{ formError }}</div>
 
-        <div>
-          <label class="label">Customer</label>
-          <select v-model="form.customer_id" class="input">
-            <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label class="label">Customer</label>
+            <select v-model="form.customer_id" class="input">
+              <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Add Product</label>
+            <ProductPicker :products="products" @select="addProduct" />
+          </div>
         </div>
 
-        <div>
-          <div class="mb-1 flex items-center justify-between">
-            <label class="label !mb-0">Items</label>
-            <button type="button" class="btn-ghost !px-2 !py-1 text-xs" @click="addRow">+ Add Item</button>
+        <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
+              <tr>
+                <th class="px-3 py-2">Product</th>
+                <th class="w-24 px-3 py-2">Qty</th>
+                <th class="w-32 px-3 py-2">Unit Price</th>
+                <th class="w-32 px-3 py-2 text-right">Subtotal</th>
+                <th class="w-10 px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr v-if="!form.items.length"><td colspan="5" class="px-3 py-6 text-center text-slate-400">Search and add products above</td></tr>
+              <tr v-for="(it, i) in form.items" :key="it.product_id">
+                <td class="px-3 py-2">
+                  <div class="font-medium">{{ it.name }}</div>
+                  <div class="text-xs" :class="it.quantity > it.stock ? 'text-red-500' : 'text-slate-400'">{{ it.sku }} · stock {{ it.stock }}</div>
+                </td>
+                <td class="px-3 py-2"><input v-model.number="it.quantity" type="number" min="1" :max="it.stock" class="input !py-1.5" /></td>
+                <td class="px-3 py-2"><input v-model.number="it.unit_price" type="number" min="0" class="input !py-1.5" /></td>
+                <td class="px-3 py-2 text-right font-medium">{{ money(it.quantity * it.unit_price) }}</td>
+                <td class="px-3 py-2"><button type="button" class="btn-danger !px-2 !py-1 text-xs" @click="removeRow(i)">✕</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label class="label">Note</label>
+            <textarea v-model="form.note" rows="3" class="input" placeholder="Optional remark / reference"></textarea>
           </div>
-          <div class="space-y-2">
-            <div v-for="(it, i) in form.items" :key="i" class="flex items-center gap-2">
-              <select v-model="it.product_id" class="input flex-1" @change="onProductChange(it)">
-                <option v-for="p in products" :key="p.id" :value="p.id">
-                  {{ p.name }} (stock: {{ p.quantity }})
-                </option>
-              </select>
-              <input v-model.number="it.quantity" type="number" min="1" class="input w-20" placeholder="Qty" />
-              <input v-model.number="it.unit_price" type="number" min="0" class="input w-28" placeholder="Price" />
-              <button type="button" class="btn-danger !px-2 !py-1 text-xs" :disabled="form.items.length === 1" @click="removeRow(i)">✕</button>
+
+          <div class="space-y-2 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-700/40">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Subtotal</span><span class="font-medium">{{ money(subtotal) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Discount</span>
+              <input v-model.number="form.discount" type="number" min="0" class="input !w-28 !py-1 text-right" />
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">VAT / Tax (%)</span>
+              <input v-model.number="form.tax_percent" type="number" min="0" class="input !w-28 !py-1 text-right" />
+            </div>
+            <div class="flex items-center justify-between text-slate-500">
+              <span>Tax Amount</span><span>{{ money(taxAmount) }}</span>
+            </div>
+            <div class="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-bold dark:border-slate-600">
+              <span>Grand Total</span><span class="text-brand-600">{{ money(grandTotal) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">Paid</span>
+              <input v-model.number="form.paid_amount" type="number" min="0" class="input !w-28 !py-1 text-right" />
+            </div>
+            <div class="flex items-center justify-between font-semibold">
+              <span class="text-slate-500">Due</span>
+              <span :class="due > 0 ? 'text-amber-600' : 'text-emerald-600'">{{ money(due) }}</span>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="label">Paid Amount</label>
-            <input v-model.number="form.paid_amount" type="number" min="0" class="input" />
-          </div>
-          <div>
-            <label class="label">Total</label>
-            <div class="input bg-slate-50 font-semibold dark:bg-slate-700/50">{{ money(total) }}</div>
-          </div>
-        </div>
-
-        <div>
-          <label class="label">Note</label>
-          <input v-model="form.note" class="input" placeholder="Optional" />
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
+        <div class="flex justify-end gap-2">
           <button type="button" class="btn-ghost" @click="showModal = false">Cancel</button>
           <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Saving…' : 'Save Sale' }}</button>
         </div>

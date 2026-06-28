@@ -20,6 +20,8 @@ type SaleItemRequest struct {
 
 type CreateSaleRequest struct {
 	CustomerID uint              `json:"customer_id" binding:"required"`
+	Discount   float64           `json:"discount" binding:"gte=0"`
+	TaxPercent float64           `json:"tax_percent" binding:"gte=0"`
 	PaidAmount float64           `json:"paid_amount" binding:"gte=0"`
 	Note       string            `json:"note" binding:"max=255"`
 	Items      []SaleItemRequest `json:"items" binding:"required,min=1,dive"`
@@ -62,6 +64,8 @@ func (ctrl *SaleController) Create(c *gin.Context) {
 	sale, err := ctrl.service.Create(services.CreateSaleInput{
 		CustomerID: req.CustomerID,
 		UserID:     middleware.UserID(c),
+		Discount:   req.Discount,
+		TaxPercent: req.TaxPercent,
 		PaidAmount: req.PaidAmount,
 		Note:       req.Note,
 		Items:      items,

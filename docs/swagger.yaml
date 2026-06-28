@@ -72,6 +72,9 @@ definitions:
     type: object
   internal_controllers.CreatePurchaseRequest:
     properties:
+      discount:
+        minimum: 0
+        type: number
       items:
         items:
           $ref: '#/definitions/internal_controllers.PurchaseItemRequest'
@@ -85,6 +88,9 @@ definitions:
         type: number
       supplier_id:
         type: integer
+      tax_percent:
+        minimum: 0
+        type: number
     required:
     - items
     - supplier_id
@@ -109,6 +115,9 @@ definitions:
     properties:
       customer_id:
         type: integer
+      discount:
+        minimum: 0
+        type: number
       items:
         items:
           $ref: '#/definitions/internal_controllers.SaleItemRequest'
@@ -118,6 +127,9 @@ definitions:
         maxLength: 255
         type: string
       paid_amount:
+        minimum: 0
+        type: number
+      tax_percent:
         minimum: 0
         type: number
     required:

@@ -27,6 +27,8 @@ type PurchaseItemInput struct {
 type CreatePurchaseInput struct {
 	SupplierID uint
 	UserID     uint
+	Discount   float64
+	TaxPercent float64
 	PaidAmount float64
 	Note       string
 	Items      []PurchaseItemInput
@@ -65,8 +67,8 @@ func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, e
 		return nil, err
 	}
 
-	// Build the line items, validating each product and computing totals.
-	var total float64
+	// Build the line items, validating each product and computing the subtotal.
+	var subtotal float64
 	items := make([]models.PurchaseItem, 0, len(input.Items))
 	for _, in := range input.Items {
 		if in.Quantity <= 0 {
@@ -79,17 +81,20 @@ func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, e
 			return nil, err
 		}
 
-		subtotal := float64(in.Quantity) * in.UnitCost
-		total += subtotal
+		lineTotal := float64(in.Quantity) * in.UnitCost
+		subtotal += lineTotal
 		items = append(items, models.PurchaseItem{
 			ProductID: in.ProductID,
 			Quantity:  in.Quantity,
 			UnitCost:  in.UnitCost,
-			Subtotal:  subtotal,
+			Subtotal:  lineTotal,
 		})
 	}
 
-	if input.PaidAmount > total {
+	// Accounting: grand total = subtotal - discount + VAT/tax (tax is charged on
+	// the discounted amount). Due = grand total - paid.
+	discount, taxAmount, grandTotal := computeTotals(subtotal, input.Discount, input.TaxPercent)
+	if input.PaidAmount > grandTotal {
 		return nil, ErrPaidExceedsTotal
 	}
 
@@ -103,9 +108,13 @@ func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, e
 		InvoiceNo:   fmt.Sprintf("PUR-%06d", count+1),
 		SupplierID:  input.SupplierID,
 		UserID:      input.UserID,
-		TotalAmount: total,
+		Subtotal:    subtotal,
+		Discount:    discount,
+		TaxPercent:  input.TaxPercent,
+		TaxAmount:   taxAmount,
+		TotalAmount: grandTotal,
 		PaidAmount:  input.PaidAmount,
-		Due:         total - input.PaidAmount,
+		Due:         grandTotal - input.PaidAmount,
 		Note:        input.Note,
 		Items:       items,
 	}

@@ -5,9 +5,16 @@ package models
 // is not enough), and adds any unpaid amount to the customer's due.
 type Sale struct {
 	BaseModel
-	InvoiceNo   string  `gorm:"type:varchar(30);not null;uniqueIndex" json:"invoice_no"`
-	CustomerID  uint    `gorm:"not null;index" json:"customer_id"`
-	UserID      uint    `gorm:"not null;index" json:"user_id"`
+	InvoiceNo  string `gorm:"type:varchar(30);not null;uniqueIndex" json:"invoice_no"`
+	CustomerID uint   `gorm:"not null;index" json:"customer_id"`
+	UserID     uint   `gorm:"not null;index" json:"user_id"`
+
+	// Money breakdown: TotalAmount is the GRAND total =
+	// Subtotal - Discount + TaxAmount. Due = TotalAmount - PaidAmount.
+	Subtotal    float64 `gorm:"type:decimal(14,2);not null;default:0" json:"subtotal"`
+	Discount    float64 `gorm:"type:decimal(14,2);not null;default:0" json:"discount"`
+	TaxPercent  float64 `gorm:"type:decimal(5,2);not null;default:0" json:"tax_percent"`
+	TaxAmount   float64 `gorm:"type:decimal(14,2);not null;default:0" json:"tax_amount"`
 	TotalAmount float64 `gorm:"type:decimal(14,2);not null" json:"total_amount"`
 	PaidAmount  float64 `gorm:"type:decimal(14,2);not null" json:"paid_amount"`
 	Due         float64 `gorm:"type:decimal(14,2);not null" json:"due"`

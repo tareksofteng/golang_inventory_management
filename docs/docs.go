@@ -1509,6 +1509,10 @@ const docTemplate = `{
                 "supplier_id"
             ],
             "properties": {
+                "discount": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
@@ -1526,6 +1530,10 @@ const docTemplate = `{
                 },
                 "supplier_id": {
                     "type": "integer"
+                },
+                "tax_percent": {
+                    "type": "number",
+                    "minimum": 0
                 }
             }
         },
@@ -1562,6 +1570,10 @@ const docTemplate = `{
                 "customer_id": {
                     "type": "integer"
                 },
+                "discount": {
+                    "type": "number",
+                    "minimum": 0
+                },
                 "items": {
                     "type": "array",
                     "minItems": 1,
@@ -1574,6 +1586,10 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "paid_amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "tax_percent": {
                     "type": "number",
                     "minimum": 0
                 }
