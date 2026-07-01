@@ -982,6 +982,14 @@ const docTemplate = `{
                     "Reports"
                 ],
                 "summary": "Current stock report with total stock value",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by category id",
+                        "name": "category_id",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1114,6 +1122,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/returns/purchase/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Get one purchase return with items (for the return invoice)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Purchase return ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/returns/sale": {
             "get": {
                 "security": [
@@ -1196,6 +1238,40 @@ const docTemplate = `{
                         "description": "Sale invoice number",
                         "name": "invoice",
                         "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/sale/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Returns"
+                ],
+                "summary": "Get one sale return with items (for the return invoice)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Sale return ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     }
                 ],

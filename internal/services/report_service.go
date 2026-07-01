@@ -45,7 +45,7 @@ type ReportService interface {
 	Purchases(from, to time.Time) (*PurchaseReport, error)
 	CustomerDue() (*DueReport, error)
 	SupplierDue() (*DueReport, error)
-	Stock() (*StockReport, error)
+	Stock(categoryID uint) (*StockReport, error)
 }
 
 type reportService struct {
@@ -110,8 +110,8 @@ func (s *reportService) SupplierDue() (*DueReport, error) {
 	return &DueReport{TotalDue: total, Suppliers: suppliers}, nil
 }
 
-func (s *reportService) Stock() (*StockReport, error) {
-	items, err := s.repo.StockReport()
+func (s *reportService) Stock(categoryID uint) (*StockReport, error) {
+	items, err := s.repo.StockReport(categoryID)
 	if err != nil {
 		return nil, err
 	}

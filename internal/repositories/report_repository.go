@@ -14,7 +14,7 @@ type ReportRepository interface {
 	PurchasesBetween(from, to time.Time) ([]models.Purchase, error)
 	CustomersWithDue() ([]models.Customer, error)
 	SuppliersWithDue() ([]models.Supplier, error)
-	StockReport() ([]models.Product, error)
+	StockReport(categoryID uint) ([]models.Product, error)
 }
 
 type reportRepository struct {
@@ -60,13 +60,14 @@ func (r *reportRepository) SuppliersWithDue() ([]models.Supplier, error) {
 	return suppliers, err
 }
 
-// StockReport lists active products with their category for the stock sheet.
-func (r *reportRepository) StockReport() ([]models.Product, error) {
+// StockReport lists active products with their category for the stock sheet,
+// optionally filtered to a single category (categoryID == 0 means all).
+func (r *reportRepository) StockReport(categoryID uint) ([]models.Product, error) {
 	var products []models.Product
-	err := r.db.
-		Preload("Category").
-		Where("is_active = ?", true).
-		Order("quantity ASC").
-		Find(&products).Error
+	q := r.db.Preload("Category").Where("is_active = ?", true)
+	if categoryID > 0 {
+		q = q.Where("category_id = ?", categoryID)
+	}
+	err := q.Order("quantity ASC").Find(&products).Error
 	return products, err
 }

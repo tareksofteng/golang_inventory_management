@@ -159,6 +159,50 @@ func (ctrl *ReturnController) CreateSaleReturn(c *gin.Context) {
 	response.Created(c, "Sale return created", ret)
 }
 
+// GetPurchaseReturn godoc
+// @Summary  Get one purchase return with items (for the return invoice)
+// @Tags     Returns
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Purchase return ID"
+// @Success  200  {object}  map[string]interface{}
+// @Router   /returns/purchase/{id} [get]
+func (ctrl *ReturnController) GetPurchaseReturn(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid id", nil)
+		return
+	}
+	ret, err := ctrl.service.GetPurchaseReturn(id)
+	if err != nil {
+		response.NotFound(c, "Purchase return not found")
+		return
+	}
+	response.Success(c, "Purchase return", ret)
+}
+
+// GetSaleReturn godoc
+// @Summary  Get one sale return with items (for the return invoice)
+// @Tags     Returns
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Sale return ID"
+// @Success  200  {object}  map[string]interface{}
+// @Router   /returns/sale/{id} [get]
+func (ctrl *ReturnController) GetSaleReturn(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid id", nil)
+		return
+	}
+	ret, err := ctrl.service.GetSaleReturn(id)
+	if err != nil {
+		response.NotFound(c, "Sale return not found")
+		return
+	}
+	response.Success(c, "Sale return", ret)
+}
+
 // ListPurchaseReturns godoc
 // @Summary  List purchase returns (paginated)
 // @Tags     Returns

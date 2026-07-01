@@ -950,6 +950,11 @@ paths:
       - Reports
   /reports/stock:
     get:
+      parameters:
+      - description: Filter by category id
+        in: query
+        name: category_id
+        type: integer
       produces:
       - application/json
       responses:
@@ -1017,6 +1022,27 @@ paths:
         due)
       tags:
       - Returns
+  /returns/purchase/{id}:
+    get:
+      parameters:
+      - description: Purchase return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get one purchase return with items (for the return invoice)
+      tags:
+      - Returns
   /returns/purchase/lookup:
     get:
       parameters:
@@ -1075,6 +1101,27 @@ paths:
       - BearerAuth: []
       summary: Return goods against a sale invoice (increases stock + reduces customer
         due)
+      tags:
+      - Returns
+  /returns/sale/{id}:
+    get:
+      parameters:
+      - description: Sale return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get one sale return with items (for the return invoice)
       tags:
       - Returns
   /returns/sale/lookup:

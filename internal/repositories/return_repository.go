@@ -13,6 +13,8 @@ type ReturnRepository interface {
 	CountSaleReturns() (int64, error)
 	FindPurchaseReturns(offset, limit int) ([]models.PurchaseReturn, int64, error)
 	FindSaleReturns(offset, limit int) ([]models.SaleReturn, int64, error)
+	FindPurchaseReturnByID(id uint) (*models.PurchaseReturn, error)
+	FindSaleReturnByID(id uint) (*models.SaleReturn, error)
 	// Already-returned quantity per product for a given source invoice.
 	ReturnedQtyByPurchase(purchaseID uint) (map[uint]int, error)
 	ReturnedQtyBySale(saleID uint) (map[uint]int, error)
@@ -113,6 +115,24 @@ func (r *returnRepository) FindSaleReturns(offset, limit int) ([]models.SaleRetu
 	}
 	err := r.db.Preload("Customer").Order("id DESC").Offset(offset).Limit(limit).Find(&rows).Error
 	return rows, total, err
+}
+
+func (r *returnRepository) FindPurchaseReturnByID(id uint) (*models.PurchaseReturn, error) {
+	var ret models.PurchaseReturn
+	err := r.db.Preload("Supplier").Preload("Items.Product").First(&ret, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ret, nil
+}
+
+func (r *returnRepository) FindSaleReturnByID(id uint) (*models.SaleReturn, error) {
+	var ret models.SaleReturn
+	err := r.db.Preload("Customer").Preload("Items.Product").First(&ret, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ret, nil
 }
 
 func (r *returnRepository) ReturnedQtyByPurchase(purchaseID uint) (map[uint]int, error) {

@@ -25,11 +25,16 @@ const pad = (n) => String(n).padStart(2, '0')
 const from = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`)
 const to = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`)
 
+// Stock report: category filter.
+const categories = ref([])
+const categoryId = ref('')
+
 async function load() {
   loading.value = true
   data.value = null
   try {
     const params = active.value.ranged ? { from: from.value, to: to.value } : {}
+    if (type.value === 'stock' && categoryId.value) params.category_id = categoryId.value
     const res = await api.get(active.value.endpoint, { params })
     data.value = res.data.data
   } finally {
@@ -38,11 +43,22 @@ async function load() {
 }
 
 watch(type, load)
+watch(categoryId, () => {
+  if (type.value === 'stock') load()
+})
 
 const fmtDate = (d) => new Date(d).toLocaleDateString()
 const printPage = () => window.print()
 
-onMounted(load)
+onMounted(async () => {
+  try {
+    const res = await api.get('/categories', { params: { per_page: 100 } })
+    categories.value = res.data.data
+  } catch (e) {
+    /* categories are only needed for the stock filter */
+  }
+  load()
+})
 </script>
 
 <template>
@@ -63,6 +79,18 @@ onMounted(load)
         <input v-model="to" type="date" class="input" />
       </div>
       <button class="btn-primary" @click="load">Apply</button>
+    </div>
+
+    <!-- Category filter (stock report only) -->
+    <div v-if="type === 'stock'" class="card mb-4 flex flex-wrap items-center gap-3 p-4 print:hidden">
+      <span class="text-sm font-medium text-slate-600 dark:text-slate-300">Filter by Category</span>
+      <select v-model="categoryId" class="input max-w-xs">
+        <option value="">All Categories</option>
+        <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+      </select>
+      <span v-if="data" class="ml-auto rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-600/20 dark:text-brand-200">
+        {{ data.items.length }} product(s)
+      </span>
     </div>
 
     <div v-if="loading" class="py-16 text-center text-slate-400">Loading…</div>

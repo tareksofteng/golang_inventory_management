@@ -68,6 +68,8 @@ type ReturnService interface {
 	CreateSaleReturn(input CreateSaleReturnInput) (*models.SaleReturn, error)
 	ListPurchaseReturns(page, perPage int) ([]models.PurchaseReturn, int64, error)
 	ListSaleReturns(page, perPage int) ([]models.SaleReturn, int64, error)
+	GetPurchaseReturn(id uint) (*models.PurchaseReturn, error)
+	GetSaleReturn(id uint) (*models.SaleReturn, error)
 }
 
 type returnService struct {
@@ -271,6 +273,14 @@ func saleItemsToReturnable(items []models.SaleItem) []models.PurchaseItem {
 		out[i] = models.PurchaseItem{ProductID: it.ProductID, Quantity: it.Quantity}
 	}
 	return out
+}
+
+func (s *returnService) GetPurchaseReturn(id uint) (*models.PurchaseReturn, error) {
+	return s.repo.FindPurchaseReturnByID(id)
+}
+
+func (s *returnService) GetSaleReturn(id uint) (*models.SaleReturn, error) {
+	return s.repo.FindSaleReturnByID(id)
 }
 
 func (s *returnService) ListPurchaseReturns(page, perPage int) ([]models.PurchaseReturn, int64, error) {

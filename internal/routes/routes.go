@@ -79,10 +79,12 @@ func registerReturnRoutes(rg *gin.RouterGroup, ctrl *controllers.ReturnControlle
 		g.GET("/purchase/lookup", middleware.RequirePermission(rbac.PermPurchaseManage), ctrl.LookupPurchase)
 		g.POST("/purchase", middleware.RequirePermission(rbac.PermPurchaseManage), ctrl.CreatePurchaseReturn)
 		g.GET("/purchase", middleware.RequirePermission(rbac.PermPurchaseManage), ctrl.ListPurchaseReturns)
+		g.GET("/purchase/:id", middleware.RequirePermission(rbac.PermPurchaseManage), ctrl.GetPurchaseReturn)
 
 		g.GET("/sale/lookup", middleware.RequirePermission(rbac.PermSalesManage), ctrl.LookupSale)
 		g.POST("/sale", middleware.RequirePermission(rbac.PermSalesManage), ctrl.CreateSaleReturn)
 		g.GET("/sale", middleware.RequirePermission(rbac.PermSalesManage), ctrl.ListSaleReturns)
+		g.GET("/sale/:id", middleware.RequirePermission(rbac.PermSalesManage), ctrl.GetSaleReturn)
 	}
 }
 

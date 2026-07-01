@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import api, { assetUrl } from '../lib/api'
 
 const props = defineProps({
-  type: { type: String, required: true }, // 'purchase' | 'sale'
+  // 'purchase' | 'sale' | 'purchase-return' | 'sale-return'
+  type: { type: String, required: true },
   id: { type: [Number, String], required: true },
 })
 const emit = defineEmits(['close'])
@@ -12,15 +13,20 @@ const money = (n) => '৳ ' + Number(n || 0).toLocaleString('en-IN', { minimumFr
 const data = ref(null)
 const loading = ref(true)
 
-const isPurchase = computed(() => props.type === 'purchase')
-const party = computed(() => (isPurchase.value ? data.value?.supplier : data.value?.customer))
-const unitOf = (it) => (isPurchase.value ? it.unit_cost : it.unit_price)
+const CONFIG = {
+  purchase: { endpoint: (id) => `/purchases/${id}`, party: 'supplier', unit: 'unit_cost', heading: 'Purchase', partyLabel: 'Supplier', isReturn: false },
+  sale: { endpoint: (id) => `/sales/${id}`, party: 'customer', unit: 'unit_price', heading: 'Invoice', partyLabel: 'Bill To', isReturn: false },
+  'purchase-return': { endpoint: (id) => `/returns/purchase/${id}`, party: 'supplier', unit: 'unit_cost', heading: 'Purchase Return', partyLabel: 'Supplier', isReturn: true },
+  'sale-return': { endpoint: (id) => `/returns/sale/${id}`, party: 'customer', unit: 'unit_price', heading: 'Sales Return', partyLabel: 'Customer', isReturn: true },
+}
+const cfg = computed(() => CONFIG[props.type] || CONFIG.sale)
+const party = computed(() => data.value?.[cfg.value.party])
+const unitOf = (it) => it[cfg.value.unit]
 const printPage = () => window.print()
 
 onMounted(async () => {
   try {
-    const url = isPurchase.value ? `/purchases/${props.id}` : `/sales/${props.id}`
-    const res = await api.get(url)
+    const res = await api.get(cfg.value.endpoint(props.id))
     data.value = res.data.data
   } finally {
     loading.value = false
@@ -47,7 +53,7 @@ onMounted(async () => {
               </div>
             </div>
             <div class="text-right">
-              <div class="text-2xl font-extrabold uppercase tracking-widest">{{ isPurchase ? 'Purchase' : 'Invoice' }}</div>
+              <div class="text-2xl font-extrabold uppercase tracking-widest">{{ cfg.heading }}</div>
               <div class="mt-1 font-mono text-sm text-white/90">{{ data.invoice_no }}</div>
             </div>
           </div>
@@ -58,7 +64,7 @@ onMounted(async () => {
           <div class="flex items-start justify-between border-b border-dashed border-slate-200 pb-5">
             <div>
               <div class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {{ isPurchase ? 'Supplier' : 'Bill To' }}
+                {{ cfg.partyLabel }}
               </div>
               <div class="text-base font-bold text-slate-700">{{ party?.name }}</div>
               <div class="text-sm text-slate-500">{{ party?.phone }}</div>
@@ -109,10 +115,12 @@ onMounted(async () => {
               <div v-if="data.discount" class="flex justify-between text-slate-500"><span>Discount</span><span class="text-rose-500">− {{ money(data.discount) }}</span></div>
               <div v-if="data.tax_amount" class="flex justify-between text-slate-500"><span>VAT / Tax ({{ data.tax_percent }}%)</span><span class="text-slate-700">{{ money(data.tax_amount) }}</span></div>
               <div class="my-1.5 flex items-center justify-between rounded-lg bg-gradient-to-r from-brand-600 to-indigo-700 px-3 py-2 text-white">
-                <span class="text-sm font-semibold">Grand Total</span><span class="text-lg font-extrabold">{{ money(data.total_amount) }}</span>
+                <span class="text-sm font-semibold">{{ cfg.isReturn ? 'Total Return' : 'Grand Total' }}</span><span class="text-lg font-extrabold">{{ money(data.total_amount) }}</span>
               </div>
-              <div class="flex justify-between text-slate-500"><span>Paid</span><span class="font-medium text-emerald-600">{{ money(data.paid_amount) }}</span></div>
-              <div class="flex justify-between border-t border-slate-200 pt-1.5 font-semibold"><span class="text-slate-600">Balance Due</span><span :class="data.due > 0 ? 'text-amber-600' : 'text-emerald-600'">{{ money(data.due) }}</span></div>
+              <template v-if="!cfg.isReturn">
+                <div class="flex justify-between text-slate-500"><span>Paid</span><span class="font-medium text-emerald-600">{{ money(data.paid_amount) }}</span></div>
+                <div class="flex justify-between border-t border-slate-200 pt-1.5 font-semibold"><span class="text-slate-600">Balance Due</span><span :class="data.due > 0 ? 'text-amber-600' : 'text-emerald-600'">{{ money(data.due) }}</span></div>
+              </template>
             </div>
           </div>
 

@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api, { assetUrl } from '../lib/api'
+import InvoiceModal from '../components/InvoiceModal.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -30,6 +31,7 @@ const saving = ref(false)
 
 const recent = ref([])
 const recentMeta = ref({ total: 0 })
+const invoiceId = ref(null) // open the return invoice for this id
 
 const total = computed(() => positions.value.reduce((s, p) => s + Number(p.return_qty || 0) * Number(p.unit_value || 0), 0))
 
@@ -215,19 +217,25 @@ onMounted(loadRecent)
               <th class="px-4 py-3">{{ labels.party }}</th>
               <th class="px-4 py-3 text-right">Amount</th>
               <th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3 text-right">Invoice</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
-            <tr v-if="!recent.length"><td colspan="4" class="px-4 py-8 text-center text-slate-400">No returns yet</td></tr>
+            <tr v-if="!recent.length"><td colspan="5" class="px-4 py-8 text-center text-slate-400">No returns yet</td></tr>
             <tr v-for="r in recent" :key="r.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ r.invoice_no }}</td>
               <td class="px-4 py-3">{{ (r.supplier || r.customer)?.name }}</td>
               <td class="px-4 py-3 text-right font-semibold">{{ money(r.total_amount) }}</td>
               <td class="px-4 py-3 text-slate-400">{{ new Date(r.created_at).toLocaleDateString() }}</td>
+              <td class="px-4 py-3 text-right">
+                <button class="btn-ghost !px-2 !py-1 text-xs" @click="invoiceId = r.id">Invoice</button>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <InvoiceModal v-if="invoiceId" :type="mode + '-return'" :id="invoiceId" @close="invoiceId = null" />
   </div>
 </template>

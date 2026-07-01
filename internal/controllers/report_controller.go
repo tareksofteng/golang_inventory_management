@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"strconv"
 	"time"
 
 	"inventory-api/internal/services"
@@ -116,9 +117,11 @@ func (ctrl *ReportController) SupplierDue(c *gin.Context) {
 // @Produce  json
 // @Security BearerAuth
 // @Success  200  {object}  map[string]interface{}
+// @Param    category_id  query  int  false  "Filter by category id"
 // @Router   /reports/stock [get]
 func (ctrl *ReportController) Stock(c *gin.Context) {
-	report, err := ctrl.service.Stock()
+	categoryID, _ := strconv.ParseUint(c.Query("category_id"), 10, 64)
+	report, err := ctrl.service.Stock(uint(categoryID))
 	if err != nil {
 		response.InternalError(c, "Failed to build stock report")
 		return
