@@ -145,7 +145,7 @@ func main() {
 	returnController := controllers.NewReturnController(returnService)
 
 	ledgerRepo := repositories.NewLedgerRepository(db)
-	ledgerService := services.NewLedgerService(ledgerRepo, customerRepo, supplierRepo)
+	ledgerService := services.NewLedgerService(ledgerRepo, customerRepo, supplierRepo, productRepo)
 	ledgerController := controllers.NewLedgerController(ledgerService)
 
 	uploadController := controllers.NewUploadController()

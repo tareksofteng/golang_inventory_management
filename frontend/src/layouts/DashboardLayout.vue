@@ -73,6 +73,7 @@ const groups = [
     items: [
       { name: 'Customer Ledger', to: '/ledger/customer', icon: 'user', perm: 'report.access' },
       { name: 'Supplier Ledger', to: '/ledger/supplier', icon: 'truck', perm: 'report.access' },
+      { name: 'Product Ledger', to: '/ledger/product', icon: 'cube', perm: 'report.access' },
     ],
   },
   { title: 'Administration', items: [{ name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' }] },

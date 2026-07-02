@@ -37,23 +37,48 @@ type rawEntry struct {
 	Credit float64
 }
 
+// ProductLedgerEntry is one stock movement line with a running quantity balance.
+type ProductLedgerEntry struct {
+	Date    string `json:"date"`
+	Type    string `json:"type"`
+	Ref     string `json:"ref"`
+	In      int    `json:"in"`
+	Out     int    `json:"out"`
+	Balance int    `json:"balance"`
+}
+
+// ProductLedger is a product's full stock-movement statement.
+type ProductLedger struct {
+	ProductID uint                 `json:"product_id"`
+	Name      string               `json:"name"`
+	SKU       string               `json:"sku"`
+	Image     string               `json:"image"`
+	Unit      string               `json:"unit"`
+	Opening   int                  `json:"opening"`
+	Closing   int                  `json:"closing"`
+	Entries   []ProductLedgerEntry `json:"entries"`
+}
+
 type LedgerService interface {
 	CustomerLedger(customerID uint) (*Ledger, error)
 	SupplierLedger(supplierID uint) (*Ledger, error)
+	ProductLedger(productID uint) (*ProductLedger, error)
 }
 
 type ledgerService struct {
 	repo         repositories.LedgerRepository
 	customerRepo repositories.CustomerRepository
 	supplierRepo repositories.SupplierRepository
+	productRepo  repositories.ProductRepository
 }
 
 func NewLedgerService(
 	repo repositories.LedgerRepository,
 	customerRepo repositories.CustomerRepository,
 	supplierRepo repositories.SupplierRepository,
+	productRepo repositories.ProductRepository,
 ) LedgerService {
-	return &ledgerService{repo: repo, customerRepo: customerRepo, supplierRepo: supplierRepo}
+	return &ledgerService{repo: repo, customerRepo: customerRepo, supplierRepo: supplierRepo, productRepo: productRepo}
 }
 
 // build sorts raw entries by time and computes the running balance. Debit grows
@@ -153,4 +178,73 @@ func (s *ledgerService) SupplierLedger(supplierID uint) (*Ledger, error) {
 	}
 
 	return build(supplier.ID, supplier.Name, raws), nil
+}
+
+func (s *ledgerService) ProductLedger(productID uint) (*ProductLedger, error) {
+	product, err := s.productRepo.FindByID(productID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound
+		}
+		return nil, err
+	}
+
+	purchases, err := s.repo.ProductPurchases(productID)
+	if err != nil {
+		return nil, err
+	}
+	sales, err := s.repo.ProductSales(productID)
+	if err != nil {
+		return nil, err
+	}
+	pReturns, err := s.repo.ProductPurchaseReturns(productID)
+	if err != nil {
+		return nil, err
+	}
+	sReturns, err := s.repo.ProductSaleReturns(productID)
+	if err != nil {
+		return nil, err
+	}
+
+	type rawMove struct {
+		t        time.Time
+		typ, ref string
+		in, out  int
+	}
+	var moves []rawMove
+	for _, m := range purchases {
+		moves = append(moves, rawMove{m.Date, "Purchase", m.Ref, m.Qty, 0})
+	}
+	for _, m := range sReturns {
+		moves = append(moves, rawMove{m.Date, "Sale Return", m.Ref, m.Qty, 0})
+	}
+	for _, m := range sales {
+		moves = append(moves, rawMove{m.Date, "Sale", m.Ref, 0, m.Qty})
+	}
+	for _, m := range pReturns {
+		moves = append(moves, rawMove{m.Date, "Purchase Return", m.Ref, 0, m.Qty})
+	}
+	sort.SliceStable(moves, func(i, j int) bool { return moves[i].t.Before(moves[j].t) })
+
+	// Opening = current stock minus the net of all movements, so the running
+	// balance ends exactly at the product's current quantity.
+	net := 0
+	for _, m := range moves {
+		net += m.in - m.out
+	}
+	opening := product.Quantity - net
+
+	entries := make([]ProductLedgerEntry, 0, len(moves))
+	bal := opening
+	for _, m := range moves {
+		bal += m.in - m.out
+		entries = append(entries, ProductLedgerEntry{
+			Date: m.t.Format("2006-01-02"), Type: m.typ, Ref: m.ref, In: m.in, Out: m.out, Balance: bal,
+		})
+	}
+
+	return &ProductLedger{
+		ProductID: product.ID, Name: product.Name, SKU: product.SKU, Image: product.Image, Unit: product.Unit,
+		Opening: opening, Closing: bal, Entries: entries,
+	}, nil
 }

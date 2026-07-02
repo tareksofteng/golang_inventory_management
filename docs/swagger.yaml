@@ -586,6 +586,32 @@ paths:
       summary: Customer ledger — full statement with running balance
       tags:
       - Ledger
+  /ledger/product/{id}:
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Product ledger — full stock-movement statement with running balance
+      tags:
+      - Ledger
   /ledger/supplier/{id}:
     get:
       parameters:

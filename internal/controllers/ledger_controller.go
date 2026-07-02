@@ -72,3 +72,31 @@ func (ctrl *LedgerController) Supplier(c *gin.Context) {
 	}
 	response.Success(c, "Supplier ledger", ledger)
 }
+
+// Product godoc
+// @Summary  Product ledger — full stock-movement statement with running balance
+// @Tags     Ledger
+// @Produce  json
+// @Security BearerAuth
+// @Param    id   path      int  true  "Product ID"
+// @Success  200  {object}  map[string]interface{}
+// @Failure  404  {object}  map[string]interface{}
+// @Router   /ledger/product/{id} [get]
+func (ctrl *LedgerController) Product(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid product id", nil)
+		return
+	}
+
+	ledger, err := ctrl.service.ProductLedger(id)
+	if err != nil {
+		if errors.Is(err, services.ErrProductNotFound) {
+			response.NotFound(c, "Product not found")
+			return
+		}
+		response.InternalError(c, "Failed to build product ledger")
+		return
+	}
+	response.Success(c, "Product ledger", ledger)
+}

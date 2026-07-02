@@ -14,6 +14,7 @@ import ReportsView from '../views/ReportsView.vue'
 import PaymentsView from '../views/PaymentsView.vue'
 import ReturnsView from '../views/ReturnsView.vue'
 import LedgerView from '../views/LedgerView.vue'
+import ProductLedgerView from '../views/ProductLedgerView.vue'
 import UsersView from '../views/UsersView.vue'
 
 const routes = [
@@ -35,6 +36,7 @@ const routes = [
       { path: 'payments', name: 'payments', component: PaymentsView, meta: { anyPerm: ['sales.manage', 'purchase.manage'] } },
       { path: 'returns', name: 'returns', component: ReturnsView, meta: { anyPerm: ['sales.manage', 'purchase.manage'] } },
       { path: 'ledger', redirect: '/ledger/supplier' },
+      { path: 'ledger/product', name: 'product-ledger', component: ProductLedgerView, meta: { perm: 'report.access' } },
       { path: 'ledger/:mode', name: 'ledger', component: LedgerView, meta: { perm: 'report.access' } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],

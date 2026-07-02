@@ -70,6 +70,7 @@ func registerLedgerRoutes(rg *gin.RouterGroup, ctrl *controllers.LedgerControlle
 	{
 		g.GET("/customer/:id", ctrl.Customer)
 		g.GET("/supplier/:id", ctrl.Supplier)
+		g.GET("/product/:id", ctrl.Product)
 	}
 }
 
