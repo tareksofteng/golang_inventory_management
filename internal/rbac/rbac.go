@@ -22,13 +22,14 @@ const (
 	PermSalesManage    Permission = "sales.manage"
 	PermReportAccess   Permission = "report.access"
 	PermUserManage     Permission = "user.manage"
+	PermAccountManage  Permission = "account.manage"
 )
 
 // rolePermissions is the policy matrix. Super admin gets everything; each lower
 // role gets a subset. Adding a permission to a role = one line here.
 var rolePermissions = map[Role][]Permission{
-	RoleSuperAdmin: {PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermUserManage},
-	RoleAdmin:      {PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess},
+	RoleSuperAdmin: {PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermUserManage, PermAccountManage},
+	RoleAdmin:      {PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermAccountManage},
 	RoleManager:    {PermProductManage, PermPurchaseManage, PermSalesManage},
 	RoleSalesman:   {PermSalesManage},
 }
@@ -36,7 +37,7 @@ var rolePermissions = map[Role][]Permission{
 // AllPermissions lists every permission the system knows about (for building
 // the user permission checkboxes).
 func AllPermissions() []Permission {
-	return []Permission{PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermUserManage}
+	return []Permission{PermProductManage, PermPurchaseManage, PermSalesManage, PermReportAccess, PermUserManage, PermAccountManage}
 }
 
 // IsValidPermission reports whether p is a known permission string.

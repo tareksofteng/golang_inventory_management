@@ -33,5 +33,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&PurchaseReturnItem{},
 		&SaleReturn{},
 		&SaleReturnItem{},
+		&Account{},
+		&JournalEntry{},
+		&JournalLine{},
 	)
 }

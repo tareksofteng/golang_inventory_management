@@ -51,9 +51,12 @@ func main() {
 	}
 	log.Println("startup: migrations applied")
 
-	// 2c. Seed the first super-admin if the users table is empty.
+	// 2c. Seed the first super-admin + default chart of accounts.
 	if err := seeder.SeedSuperAdmin(db, cfg.Seed); err != nil {
 		log.Fatalf("startup: seeding failed: %v", err)
+	}
+	if err := seeder.SeedAccounts(db); err != nil {
+		log.Fatalf("startup: account seeding failed: %v", err)
 	}
 
 	// 3. Configure Gin's mode. Release mode disables debug logs and is the
@@ -150,22 +153,31 @@ func main() {
 
 	uploadController := controllers.NewUploadController()
 
+	accountRepo := repositories.NewAccountRepository(db)
+	journalRepo := repositories.NewJournalRepository(db)
+	accountController := controllers.NewAccountController(services.NewAccountService(accountRepo))
+	journalController := controllers.NewJournalController(services.NewJournalService(journalRepo, accountRepo))
+	accountingController := controllers.NewAccountingController(services.NewAccountingService(journalRepo, accountRepo))
+
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
-		Auth:      authController,
-		User:      userController,
-		Category:  categoryController,
-		Supplier:  supplierController,
-		Product:   productController,
-		Customer:  customerController,
-		Dashboard: dashboardController,
-		Purchase:  purchaseController,
-		Sale:      saleController,
-		Report:    reportController,
-		Payment:   paymentController,
-		Return:    returnController,
-		Ledger:    ledgerController,
-		Upload:    uploadController,
+		Auth:       authController,
+		User:       userController,
+		Category:   categoryController,
+		Supplier:   supplierController,
+		Product:    productController,
+		Customer:   customerController,
+		Dashboard:  dashboardController,
+		Purchase:   purchaseController,
+		Sale:       saleController,
+		Report:     reportController,
+		Payment:    paymentController,
+		Return:     returnController,
+		Ledger:     ledgerController,
+		Upload:     uploadController,
+		Account:    accountController,
+		Journal:    journalController,
+		Accounting: accountingController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

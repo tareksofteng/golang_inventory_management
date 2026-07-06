@@ -15,6 +15,10 @@ import PaymentsView from '../views/PaymentsView.vue'
 import ReturnsView from '../views/ReturnsView.vue'
 import LedgerView from '../views/LedgerView.vue'
 import ProductLedgerView from '../views/ProductLedgerView.vue'
+import AccountsView from '../views/AccountsView.vue'
+import JournalView from '../views/JournalView.vue'
+import TrialBalanceView from '../views/TrialBalanceView.vue'
+import AccountLedgerView from '../views/AccountLedgerView.vue'
 import UsersView from '../views/UsersView.vue'
 
 const routes = [
@@ -38,6 +42,10 @@ const routes = [
       { path: 'ledger', redirect: '/ledger/supplier' },
       { path: 'ledger/product', name: 'product-ledger', component: ProductLedgerView, meta: { perm: 'report.access' } },
       { path: 'ledger/:mode', name: 'ledger', component: LedgerView, meta: { perm: 'report.access' } },
+      { path: 'accounts', name: 'accounts', component: AccountsView, meta: { perm: 'account.manage' } },
+      { path: 'journal', name: 'journal', component: JournalView, meta: { perm: 'account.manage' } },
+      { path: 'trial-balance', name: 'trial-balance', component: TrialBalanceView, meta: { perm: 'account.manage' } },
+      { path: 'account-ledger', name: 'account-ledger', component: AccountLedgerView, meta: { perm: 'account.manage' } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],
   },

@@ -33,6 +33,7 @@ const permissionOptions = [
   { value: 'sales.manage', label: 'Sales Management' },
   { value: 'report.access', label: 'Report Access' },
   { value: 'user.manage', label: 'User Management' },
+  { value: 'account.manage', label: 'Accounting' },
 ]
 
 const columns = [

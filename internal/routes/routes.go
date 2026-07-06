@@ -11,20 +11,23 @@ import (
 
 // Controllers bundles every controller the router needs.
 type Controllers struct {
-	Auth      *controllers.AuthController
-	User      *controllers.UserController
-	Category  *controllers.CategoryController
-	Supplier  *controllers.SupplierController
-	Product   *controllers.ProductController
-	Customer  *controllers.CustomerController
-	Dashboard *controllers.DashboardController
-	Purchase  *controllers.PurchaseController
-	Sale      *controllers.SaleController
-	Report    *controllers.ReportController
-	Payment   *controllers.PaymentController
-	Return    *controllers.ReturnController
-	Ledger    *controllers.LedgerController
-	Upload    *controllers.UploadController
+	Auth       *controllers.AuthController
+	User       *controllers.UserController
+	Category   *controllers.CategoryController
+	Supplier   *controllers.SupplierController
+	Product    *controllers.ProductController
+	Customer   *controllers.CustomerController
+	Dashboard  *controllers.DashboardController
+	Purchase   *controllers.PurchaseController
+	Sale       *controllers.SaleController
+	Report     *controllers.ReportController
+	Payment    *controllers.PaymentController
+	Return     *controllers.ReturnController
+	Ledger     *controllers.LedgerController
+	Upload     *controllers.UploadController
+	Account    *controllers.AccountController
+	Journal    *controllers.JournalController
+	Accounting *controllers.AccountingController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -62,6 +65,39 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	registerPaymentRoutes(protected, c.Payment)
 	registerReturnRoutes(protected, c.Return)
 	registerLedgerRoutes(protected, c.Ledger)
+	registerAccountingRoutes(protected, c.Account, c.Journal, c.Accounting)
+}
+
+// registerAccountingRoutes wires the accounting module (chart of accounts,
+// journal, trial balance, general ledger) behind the account.manage permission.
+func registerAccountingRoutes(rg *gin.RouterGroup, acc *controllers.AccountController, jnl *controllers.JournalController, rpt *controllers.AccountingController) {
+	perm := middleware.RequirePermission(rbac.PermAccountManage)
+
+	a := rg.Group("/accounts")
+	a.Use(perm)
+	{
+		a.GET("/active", acc.Active)
+		a.POST("", acc.Create)
+		a.GET("", acc.List)
+		a.GET("/:id", acc.Get)
+		a.PUT("/:id", acc.Update)
+		a.DELETE("/:id", acc.Delete)
+	}
+
+	j := rg.Group("/journal")
+	j.Use(perm)
+	{
+		j.POST("", jnl.Create)
+		j.GET("", jnl.List)
+		j.GET("/:id", jnl.Get)
+	}
+
+	r := rg.Group("/accounting")
+	r.Use(perm)
+	{
+		r.GET("/trial-balance", rpt.TrialBalance)
+		r.GET("/ledger/:id", rpt.GeneralLedger)
+	}
 }
 
 func registerLedgerRoutes(rg *gin.RouterGroup, ctrl *controllers.LedgerController) {

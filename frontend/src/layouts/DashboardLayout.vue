@@ -76,6 +76,15 @@ const groups = [
       { name: 'Product Ledger', to: '/ledger/product', icon: 'cube', perm: 'report.access' },
     ],
   },
+  {
+    title: 'Accounting',
+    items: [
+      { name: 'Chart of Accounts', to: '/accounts', icon: 'book', perm: 'account.manage' },
+      { name: 'Journal Entry', to: '/journal', icon: 'card', perm: 'account.manage' },
+      { name: 'Trial Balance', to: '/trial-balance', icon: 'chart', perm: 'account.manage' },
+      { name: 'Account Ledger', to: '/account-ledger', icon: 'book', perm: 'account.manage' },
+    ],
+  },
   { title: 'Administration', items: [{ name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' }] },
 ]
 

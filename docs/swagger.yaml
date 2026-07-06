@@ -1,5 +1,29 @@
 basePath: /api/v1
 definitions:
+  internal_controllers.CreateAccountRequest:
+    properties:
+      code:
+        maxLength: 20
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - asset
+        - liability
+        - equity
+        - income
+        - expense
+        type: string
+    required:
+    - code
+    - name
+    - type
+    type: object
   internal_controllers.CreateCategoryRequest:
     properties:
       description:
@@ -36,6 +60,25 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  internal_controllers.CreateJournalRequest:
+    properties:
+      date:
+        description: YYYY-MM-DD (optional, defaults to today)
+        type: string
+      lines:
+        items:
+          $ref: '#/definitions/internal_controllers.JournalLineRequest'
+        minItems: 2
+        type: array
+      note:
+        maxLength: 255
+        type: string
+      reference:
+        maxLength: 100
+        type: string
+    required:
+    - lines
     type: object
   internal_controllers.CreateProductRequest:
     properties:
@@ -226,6 +269,19 @@ definitions:
     - customer_id
     - method
     type: object
+  internal_controllers.JournalLineRequest:
+    properties:
+      account_id:
+        type: integer
+      credit:
+        minimum: 0
+        type: number
+      debit:
+        minimum: 0
+        type: number
+    required:
+    - account_id
+    type: object
   internal_controllers.LoginRequest:
     properties:
       email:
@@ -310,6 +366,30 @@ definitions:
     - method
     - supplier_id
     type: object
+  internal_controllers.UpdateAccountRequest:
+    properties:
+      code:
+        maxLength: 20
+        type: string
+      is_active:
+        type: boolean
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - asset
+        - liability
+        - equity
+        - income
+        - expense
+        type: string
+    required:
+    - code
+    - name
+    - type
+    type: object
   internal_controllers.UpdateProductRequest:
     properties:
       category_id:
@@ -352,6 +432,181 @@ info:
   title: Inventory Management API
   version: "1.0"
 paths:
+  /accounting/ledger/{id}:
+    get:
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: General ledger for one account (postings + running balance)
+      tags:
+      - Accounting
+  /accounting/trial-balance:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trial balance — every account's net debit/credit with matching totals
+      tags:
+      - Accounting
+  /accounts:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Search by code or name
+        in: query
+        name: search
+        type: string
+      - description: Filter by type
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List accounts (paginated, filterable by type)
+      tags:
+      - Accounts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.CreateAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a chart-of-accounts account
+      tags:
+      - Accounts
+  /accounts/{id}:
+    delete:
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an account (soft delete)
+      tags:
+      - Accounts
+    get:
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an account by id
+      tags:
+      - Accounts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.UpdateAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an account
+      tags:
+      - Accounts
+  /accounts/active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all active accounts (for journal dropdowns)
+      tags:
+      - Accounts
   /auth/login:
     post:
       consumes:
@@ -560,6 +815,79 @@ paths:
       summary: Dashboard summary (KPIs, finance, low stock, top products, trend)
       tags:
       - Dashboard
+  /journal:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List journal entries (paginated)
+      tags:
+      - Journal
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Journal entry
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.CreateJournalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Post a double-entry journal entry (debit must equal credit)
+      tags:
+      - Journal
+  /journal/{id}:
+    get:
+      parameters:
+      - description: Journal entry ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a journal entry with its lines
+      tags:
+      - Journal
   /ledger/customer/{id}:
     get:
       parameters:
