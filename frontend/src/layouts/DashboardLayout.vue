@@ -83,6 +83,8 @@ const groups = [
       { name: 'Journal Entry', to: '/journal', icon: 'card', perm: 'account.manage' },
       { name: 'Trial Balance', to: '/trial-balance', icon: 'chart', perm: 'account.manage' },
       { name: 'Account Ledger', to: '/account-ledger', icon: 'book', perm: 'account.manage' },
+      { name: 'Profit & Loss', to: '/profit-loss', icon: 'chart', perm: 'account.manage' },
+      { name: 'Balance Sheet', to: '/balance-sheet', icon: 'card', perm: 'account.manage' },
     ],
   },
   { title: 'Administration', items: [{ name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' }] },

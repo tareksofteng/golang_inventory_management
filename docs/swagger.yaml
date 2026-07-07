@@ -432,6 +432,21 @@ info:
   title: Inventory Management API
   version: "1.0"
 paths:
+  /accounting/balance-sheet:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Balance Sheet — assets, liabilities and equity
+      tags:
+      - Accounting
   /accounting/ledger/{id}:
     get:
       parameters:
@@ -451,6 +466,21 @@ paths:
       security:
       - BearerAuth: []
       summary: General ledger for one account (postings + running balance)
+      tags:
+      - Accounting
+  /accounting/profit-loss:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Profit & Loss (income statement) — income, expenses, net profit
       tags:
       - Accounting
   /accounting/trial-balance:

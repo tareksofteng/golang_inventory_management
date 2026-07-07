@@ -42,14 +42,16 @@ type saleService struct {
 	repo         repositories.SaleRepository
 	customerRepo repositories.CustomerRepository
 	productRepo  repositories.ProductRepository
+	poster       AccountingPoster
 }
 
 func NewSaleService(
 	repo repositories.SaleRepository,
 	customerRepo repositories.CustomerRepository,
 	productRepo repositories.ProductRepository,
+	poster AccountingPoster,
 ) SaleService {
-	return &saleService{repo: repo, customerRepo: customerRepo, productRepo: productRepo}
+	return &saleService{repo: repo, customerRepo: customerRepo, productRepo: productRepo, poster: poster}
 }
 
 func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
@@ -126,6 +128,9 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 			return nil, ErrInsufficientStock
 		}
 		return nil, err
+	}
+	if s.poster != nil {
+		s.poster.PostSale(sale)
 	}
 	return s.repo.FindByID(sale.ID)
 }

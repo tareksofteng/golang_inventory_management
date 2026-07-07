@@ -58,3 +58,35 @@ func (ctrl *AccountingController) GeneralLedger(c *gin.Context) {
 	}
 	response.Success(c, "General ledger", gl)
 }
+
+// ProfitLoss godoc
+// @Summary  Profit & Loss (income statement) — income, expenses, net profit
+// @Tags     Accounting
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /accounting/profit-loss [get]
+func (ctrl *AccountingController) ProfitLoss(c *gin.Context) {
+	pl, err := ctrl.service.ProfitLoss()
+	if err != nil {
+		response.InternalError(c, "Failed to build profit & loss")
+		return
+	}
+	response.Success(c, "Profit & loss", pl)
+}
+
+// BalanceSheet godoc
+// @Summary  Balance Sheet — assets, liabilities and equity
+// @Tags     Accounting
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  map[string]interface{}
+// @Router   /accounting/balance-sheet [get]
+func (ctrl *AccountingController) BalanceSheet(c *gin.Context) {
+	bs, err := ctrl.service.BalanceSheet()
+	if err != nil {
+		response.InternalError(c, "Failed to build balance sheet")
+		return
+	}
+	response.Success(c, "Balance sheet", bs)
+}

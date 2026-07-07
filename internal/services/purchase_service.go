@@ -45,14 +45,16 @@ type purchaseService struct {
 	repo         repositories.PurchaseRepository
 	supplierRepo repositories.SupplierRepository
 	productRepo  repositories.ProductRepository
+	poster       AccountingPoster
 }
 
 func NewPurchaseService(
 	repo repositories.PurchaseRepository,
 	supplierRepo repositories.SupplierRepository,
 	productRepo repositories.ProductRepository,
+	poster AccountingPoster,
 ) PurchaseService {
-	return &purchaseService{repo: repo, supplierRepo: supplierRepo, productRepo: productRepo}
+	return &purchaseService{repo: repo, supplierRepo: supplierRepo, productRepo: productRepo, poster: poster}
 }
 
 func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, error) {
@@ -122,6 +124,9 @@ func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, e
 
 	if err := s.repo.Create(purchase); err != nil {
 		return nil, err
+	}
+	if s.poster != nil {
+		s.poster.PostPurchase(purchase)
 	}
 	// Re-fetch with associations for a complete response.
 	return s.repo.FindByID(purchase.ID)

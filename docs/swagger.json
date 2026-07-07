@@ -9,6 +9,31 @@
     "host": "localhost:9000",
     "basePath": "/api/v1",
     "paths": {
+        "/accounting/balance-sheet": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accounting"
+                ],
+                "summary": "Balance Sheet — assets, liabilities and equity",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/accounting/ledger/{id}": {
             "get": {
                 "security": [
@@ -32,6 +57,31 @@
                         "required": true
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/accounting/profit-loss": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accounting"
+                ],
+                "summary": "Profit \u0026 Loss (income statement) — income, expenses, net profit",
                 "responses": {
                     "200": {
                         "description": "OK",

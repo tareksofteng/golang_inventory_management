@@ -76,14 +76,16 @@ type returnService struct {
 	repo         repositories.ReturnRepository
 	purchaseRepo repositories.PurchaseRepository
 	saleRepo     repositories.SaleRepository
+	poster       AccountingPoster
 }
 
 func NewReturnService(
 	repo repositories.ReturnRepository,
 	purchaseRepo repositories.PurchaseRepository,
 	saleRepo repositories.SaleRepository,
+	poster AccountingPoster,
 ) ReturnService {
-	return &returnService{repo: repo, purchaseRepo: purchaseRepo, saleRepo: saleRepo}
+	return &returnService{repo: repo, purchaseRepo: purchaseRepo, saleRepo: saleRepo, poster: poster}
 }
 
 // ---- Lookups ----
@@ -200,6 +202,9 @@ func (s *returnService) CreatePurchaseReturn(input CreatePurchaseReturnInput) (*
 		}
 		return nil, err
 	}
+	if s.poster != nil {
+		s.poster.PostPurchaseReturn(ret)
+	}
 	return ret, nil
 }
 
@@ -249,6 +254,9 @@ func (s *returnService) CreateSaleReturn(input CreateSaleReturnInput) (*models.S
 	}
 	if err := s.repo.CreateSaleReturn(ret); err != nil {
 		return nil, err
+	}
+	if s.poster != nil {
+		s.poster.PostSaleReturn(ret)
 	}
 	return ret, nil
 }

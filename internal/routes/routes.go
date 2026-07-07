@@ -97,6 +97,8 @@ func registerAccountingRoutes(rg *gin.RouterGroup, acc *controllers.AccountContr
 	{
 		r.GET("/trial-balance", rpt.TrialBalance)
 		r.GET("/ledger/:id", rpt.GeneralLedger)
+		r.GET("/profit-loss", rpt.ProfitLoss)
+		r.GET("/balance-sheet", rpt.BalanceSheet)
 	}
 }
 

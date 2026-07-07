@@ -21,14 +21,16 @@ type paymentService struct {
 	repo         repositories.PaymentRepository
 	customerRepo repositories.CustomerRepository
 	supplierRepo repositories.SupplierRepository
+	poster       AccountingPoster
 }
 
 func NewPaymentService(
 	repo repositories.PaymentRepository,
 	customerRepo repositories.CustomerRepository,
 	supplierRepo repositories.SupplierRepository,
+	poster AccountingPoster,
 ) PaymentService {
-	return &paymentService{repo: repo, customerRepo: customerRepo, supplierRepo: supplierRepo}
+	return &paymentService{repo: repo, customerRepo: customerRepo, supplierRepo: supplierRepo, poster: poster}
 }
 
 func (s *paymentService) PayCustomer(customerID uint, amount float64, method, note string, userID uint) (*models.Payment, error) {
@@ -54,6 +56,9 @@ func (s *paymentService) PayCustomer(customerID uint, amount float64, method, no
 			return nil, ErrAmountExceedsDue
 		}
 		return nil, err
+	}
+	if s.poster != nil {
+		s.poster.PostCustomerPayment(payment)
 	}
 	return payment, nil
 }
@@ -81,6 +86,9 @@ func (s *paymentService) PaySupplier(supplierID uint, amount float64, method, no
 			return nil, ErrAmountExceedsDue
 		}
 		return nil, err
+	}
+	if s.poster != nil {
+		s.poster.PostSupplierPayment(payment)
 	}
 	return payment, nil
 }

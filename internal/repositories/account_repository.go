@@ -11,6 +11,7 @@ type AccountRepository interface {
 	FindAll(search, accType string, offset, limit int) ([]models.Account, int64, error)
 	FindActive() ([]models.Account, error)
 	FindByID(id uint) (*models.Account, error)
+	FindByCode(code string) (*models.Account, error)
 	Update(account *models.Account) error
 	Delete(id uint) error
 	ExistsByCode(code string, excludeID uint) (bool, error)
@@ -59,6 +60,15 @@ func (r *accountRepository) FindActive() ([]models.Account, error) {
 func (r *accountRepository) FindByID(id uint) (*models.Account, error) {
 	var account models.Account
 	if err := r.db.First(&account, id).Error; err != nil {
+		return nil, err
+	}
+	return &account, nil
+}
+
+// FindByCode looks up an account by its code (used by auto-posting).
+func (r *accountRepository) FindByCode(code string) (*models.Account, error) {
+	var account models.Account
+	if err := r.db.Where("code = ?", code).First(&account).Error; err != nil {
 		return nil, err
 	}
 	return &account, nil

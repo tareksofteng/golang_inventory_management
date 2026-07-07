@@ -119,6 +119,14 @@ func main() {
 	productService := services.NewProductService(productRepo, categoryRepo, supplierRepo)
 	productController := controllers.NewProductController(productService)
 
+	// Accounting core — created early because the auto-posting poster is injected
+	// into purchase/sale/payment/return services below.
+	accountRepo := repositories.NewAccountRepository(db)
+	journalRepo := repositories.NewJournalRepository(db)
+	accountService := services.NewAccountService(accountRepo)
+	journalService := services.NewJournalService(journalRepo, accountRepo)
+	accountingPoster := services.NewAccountingPoster(journalService, accountRepo)
+
 	customerRepo := repositories.NewCustomerRepository(db)
 	customerService := services.NewCustomerService(customerRepo)
 	customerController := controllers.NewCustomerController(customerService)
@@ -128,11 +136,11 @@ func main() {
 	dashboardController := controllers.NewDashboardController(dashboardService)
 
 	purchaseRepo := repositories.NewPurchaseRepository(db)
-	purchaseService := services.NewPurchaseService(purchaseRepo, supplierRepo, productRepo)
+	purchaseService := services.NewPurchaseService(purchaseRepo, supplierRepo, productRepo, accountingPoster)
 	purchaseController := controllers.NewPurchaseController(purchaseService)
 
 	saleRepo := repositories.NewSaleRepository(db)
-	saleService := services.NewSaleService(saleRepo, customerRepo, productRepo)
+	saleService := services.NewSaleService(saleRepo, customerRepo, productRepo, accountingPoster)
 	saleController := controllers.NewSaleController(saleService)
 
 	reportRepo := repositories.NewReportRepository(db)
@@ -140,11 +148,11 @@ func main() {
 	reportController := controllers.NewReportController(reportService)
 
 	paymentRepo := repositories.NewPaymentRepository(db)
-	paymentService := services.NewPaymentService(paymentRepo, customerRepo, supplierRepo)
+	paymentService := services.NewPaymentService(paymentRepo, customerRepo, supplierRepo, accountingPoster)
 	paymentController := controllers.NewPaymentController(paymentService)
 
 	returnRepo := repositories.NewReturnRepository(db)
-	returnService := services.NewReturnService(returnRepo, purchaseRepo, saleRepo)
+	returnService := services.NewReturnService(returnRepo, purchaseRepo, saleRepo, accountingPoster)
 	returnController := controllers.NewReturnController(returnService)
 
 	ledgerRepo := repositories.NewLedgerRepository(db)
@@ -153,10 +161,8 @@ func main() {
 
 	uploadController := controllers.NewUploadController()
 
-	accountRepo := repositories.NewAccountRepository(db)
-	journalRepo := repositories.NewJournalRepository(db)
-	accountController := controllers.NewAccountController(services.NewAccountService(accountRepo))
-	journalController := controllers.NewJournalController(services.NewJournalService(journalRepo, accountRepo))
+	accountController := controllers.NewAccountController(accountService)
+	journalController := controllers.NewJournalController(journalService)
 	accountingController := controllers.NewAccountingController(services.NewAccountingService(journalRepo, accountRepo))
 
 	// 8. Register all API routes.
