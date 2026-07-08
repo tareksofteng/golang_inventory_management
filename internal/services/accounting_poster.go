@@ -15,6 +15,7 @@ const (
 	accInventory = "1200"
 	accAP        = "2000" // Accounts Payable
 	accSales     = "4000" // Sales Income
+	accCOGS      = "5000" // Cost of Goods Sold
 )
 
 // AccountingPoster turns a business transaction into a balanced journal entry.
@@ -76,6 +77,15 @@ func (p *accountingPoster) PostSale(s *models.Sale) {
 		lines = append(lines, dr(p.id(accAR), s.Due))
 	}
 	lines = append(lines, cr(p.id(accSales), s.TotalAmount))
+
+	// COGS: move the goods' cost from Inventory to expense.
+	var cost float64
+	for _, it := range s.Items {
+		cost += float64(it.Quantity) * it.UnitCost
+	}
+	if cost > 0 {
+		lines = append(lines, dr(p.id(accCOGS), cost), cr(p.id(accInventory), cost))
+	}
 	p.post(s.CreatedAt, s.InvoiceNo, "Auto: Sale", s.UserID, lines)
 }
 
@@ -117,8 +127,16 @@ func (p *accountingPoster) PostSaleReturn(r *models.SaleReturn) {
 	if r.TotalAmount <= 0 {
 		return
 	}
-	p.post(r.CreatedAt, r.InvoiceNo, "Auto: Sale return", r.UserID,
-		[]JournalLineInput{dr(p.id(accSales), r.TotalAmount), cr(p.id(accAR), r.TotalAmount)})
+	lines := []JournalLineInput{dr(p.id(accSales), r.TotalAmount), cr(p.id(accAR), r.TotalAmount)}
+	// Reverse COGS: goods come back into Inventory.
+	var cost float64
+	for _, it := range r.Items {
+		cost += float64(it.Quantity) * it.UnitCost
+	}
+	if cost > 0 {
+		lines = append(lines, dr(p.id(accInventory), cost), cr(p.id(accCOGS), cost))
+	}
+	p.post(r.CreatedAt, r.InvoiceNo, "Auto: Sale return", r.UserID, lines)
 }
 
 // Purchase return: Dr A/P, Cr Inventory.

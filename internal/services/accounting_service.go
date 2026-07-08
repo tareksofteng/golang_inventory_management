@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"math"
+	"time"
 
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
@@ -53,8 +54,13 @@ type AccountAmount struct {
 }
 
 type ProfitLoss struct {
+	From         string          `json:"from"`
+	To           string          `json:"to"`
 	Income       []AccountAmount `json:"income"`
 	TotalIncome  float64         `json:"total_income"`
+	COGS         []AccountAmount `json:"cogs"`
+	TotalCOGS    float64         `json:"total_cogs"`
+	GrossProfit  float64         `json:"gross_profit"`
 	Expenses     []AccountAmount `json:"expenses"`
 	TotalExpense float64         `json:"total_expense"`
 	NetProfit    float64         `json:"net_profit"`
@@ -74,7 +80,7 @@ type BalanceSheet struct {
 type AccountingService interface {
 	TrialBalance() (*TrialBalance, error)
 	GeneralLedger(accountID uint) (*GeneralLedger, error)
-	ProfitLoss() (*ProfitLoss, error)
+	ProfitLoss(from, to time.Time) (*ProfitLoss, error)
 	BalanceSheet() (*BalanceSheet, error)
 }
 
@@ -173,6 +179,23 @@ func (s *accountingService) balances() ([]repositories.AccountBalance, map[uint]
 	return rows, byID, nil
 }
 
+// balancesBetween is balances() restricted to a date range (for period reports).
+func (s *accountingService) balancesBetween(from, to time.Time) ([]repositories.AccountBalance, map[uint]models.Account, error) {
+	rows, err := s.journalRepo.TrialBalanceBetween(from, to)
+	if err != nil {
+		return nil, nil, err
+	}
+	accounts, _, err := s.accountRepo.FindAll("", "", 0, 100000)
+	if err != nil {
+		return nil, nil, err
+	}
+	byID := make(map[uint]models.Account, len(accounts))
+	for _, a := range accounts {
+		byID[a.ID] = a
+	}
+	return rows, byID, nil
+}
+
 // natural returns an account's balance in its normal (positive) direction.
 func natural(accType string, b repositories.AccountBalance) float64 {
 	if isDebitNormal(accType) {
@@ -181,29 +204,36 @@ func natural(accType string, b repositories.AccountBalance) float64 {
 	return b.Credit - b.Debit
 }
 
-func (s *accountingService) ProfitLoss() (*ProfitLoss, error) {
-	rows, byID, err := s.balances()
+// cogsCode is the Cost of Goods Sold account, separated from other expenses so
+// the P&L can show a gross-profit line.
+const cogsCode = "5000"
+
+func (s *accountingService) ProfitLoss(from, to time.Time) (*ProfitLoss, error) {
+	rows, byID, err := s.balancesBetween(from, to)
 	if err != nil {
 		return nil, err
 	}
-	pl := &ProfitLoss{}
+	pl := &ProfitLoss{From: from.Format("2006-01-02"), To: to.AddDate(0, 0, -1).Format("2006-01-02")}
 	for _, b := range rows {
 		acc := byID[b.AccountID]
 		amt := natural(acc.Type, b)
-		switch acc.Type {
-		case "income":
-			if amt != 0 {
-				pl.Income = append(pl.Income, AccountAmount{acc.Code, acc.Name, amt})
-				pl.TotalIncome += amt
-			}
-		case "expense":
-			if amt != 0 {
-				pl.Expenses = append(pl.Expenses, AccountAmount{acc.Code, acc.Name, amt})
-				pl.TotalExpense += amt
-			}
+		if amt == 0 {
+			continue
+		}
+		switch {
+		case acc.Type == "income":
+			pl.Income = append(pl.Income, AccountAmount{acc.Code, acc.Name, amt})
+			pl.TotalIncome += amt
+		case acc.Type == "expense" && acc.Code == cogsCode:
+			pl.COGS = append(pl.COGS, AccountAmount{acc.Code, acc.Name, amt})
+			pl.TotalCOGS += amt
+		case acc.Type == "expense":
+			pl.Expenses = append(pl.Expenses, AccountAmount{acc.Code, acc.Name, amt})
+			pl.TotalExpense += amt
 		}
 	}
-	pl.NetProfit = pl.TotalIncome - pl.TotalExpense
+	pl.GrossProfit = pl.TotalIncome - pl.TotalCOGS
+	pl.NetProfit = pl.GrossProfit - pl.TotalExpense
 	return pl, nil
 }
 

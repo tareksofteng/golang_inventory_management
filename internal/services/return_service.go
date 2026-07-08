@@ -222,6 +222,12 @@ func (s *returnService) CreateSaleReturn(input CreateSaleReturnInput) (*models.S
 	}
 	available := availabilityMap(saleItemsToReturnable(sale.Items), returned)
 
+	// Cost of each product as it was sold, for COGS reversal on return.
+	costByProduct := make(map[uint]float64)
+	for _, it := range sale.Items {
+		costByProduct[it.ProductID] = it.UnitCost
+	}
+
 	items := make([]models.SaleReturnItem, 0, len(input.Items))
 	var total float64
 	for _, in := range input.Items {
@@ -233,7 +239,7 @@ func (s *returnService) CreateSaleReturn(input CreateSaleReturnInput) (*models.S
 		}
 		sub := float64(in.Quantity) * in.UnitValue
 		total += sub
-		items = append(items, models.SaleReturnItem{ProductID: in.ProductID, Quantity: in.Quantity, UnitPrice: in.UnitValue, Subtotal: sub})
+		items = append(items, models.SaleReturnItem{ProductID: in.ProductID, Quantity: in.Quantity, UnitPrice: in.UnitValue, UnitCost: costByProduct[in.ProductID], Subtotal: sub})
 	}
 	if len(items) == 0 {
 		return nil, ErrNoItems

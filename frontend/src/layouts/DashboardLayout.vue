@@ -81,6 +81,7 @@ const groups = [
     items: [
       { name: 'Chart of Accounts', to: '/accounts', icon: 'book', perm: 'account.manage' },
       { name: 'Journal Entry', to: '/journal', icon: 'card', perm: 'account.manage' },
+      { name: 'Record Expense', to: '/expense', icon: 'card', perm: 'account.manage' },
       { name: 'Trial Balance', to: '/trial-balance', icon: 'chart', perm: 'account.manage' },
       { name: 'Account Ledger', to: '/account-ledger', icon: 'book', perm: 'account.manage' },
       { name: 'Profit & Loss', to: '/profit-loss', icon: 'chart', perm: 'account.manage' },

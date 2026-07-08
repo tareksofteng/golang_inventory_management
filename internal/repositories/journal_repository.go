@@ -31,6 +31,7 @@ type JournalRepository interface {
 	FindAll(offset, limit int) ([]models.JournalEntry, int64, error)
 	FindByID(id uint) (*models.JournalEntry, error)
 	TrialBalance() ([]AccountBalance, error)
+	TrialBalanceBetween(from, to time.Time) ([]AccountBalance, error)
 	AccountLedger(accountID uint) ([]LedgerLine, error)
 }
 
@@ -81,6 +82,19 @@ func (r *journalRepository) TrialBalance() ([]AccountBalance, error) {
 		Select("account_id, SUM(debit) as debit, SUM(credit) as credit").
 		Where("deleted_at IS NULL").
 		Group("account_id").
+		Scan(&rows).Error
+	return rows, err
+}
+
+// TrialBalanceBetween sums debits/credits per account for entries dated in
+// [from, to) — used for period reports like Profit & Loss.
+func (r *journalRepository) TrialBalanceBetween(from, to time.Time) ([]AccountBalance, error) {
+	var rows []AccountBalance
+	err := r.db.Table("journal_lines").
+		Select("journal_lines.account_id as account_id, SUM(journal_lines.debit) as debit, SUM(journal_lines.credit) as credit").
+		Joins("JOIN journal_entries ON journal_entries.id = journal_lines.journal_entry_id").
+		Where("journal_lines.deleted_at IS NULL AND journal_entries.deleted_at IS NULL AND journal_entries.date >= ? AND journal_entries.date < ?", from, to).
+		Group("journal_lines.account_id").
 		Scan(&rows).Error
 	return rows, err
 }

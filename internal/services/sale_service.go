@@ -93,6 +93,7 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 			ProductID: in.ProductID,
 			Quantity:  in.Quantity,
 			UnitPrice: in.UnitPrice,
+			UnitCost:  product.CostPrice, // snapshot cost for COGS
 			Subtotal:  lineTotal,
 		})
 	}

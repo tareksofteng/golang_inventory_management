@@ -31,6 +31,7 @@ type SaleItem struct {
 	ProductID uint    `gorm:"not null;index" json:"product_id"`
 	Quantity  int     `gorm:"not null" json:"quantity"`
 	UnitPrice float64 `gorm:"type:decimal(12,2);not null" json:"unit_price"`
+	UnitCost  float64 `gorm:"type:decimal(12,2);not null;default:0" json:"unit_cost"` // cost snapshot at sale time (for COGS)
 	Subtotal  float64 `gorm:"type:decimal(14,2);not null" json:"subtotal"`
 
 	Product *Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`

@@ -21,6 +21,7 @@ import TrialBalanceView from '../views/TrialBalanceView.vue'
 import AccountLedgerView from '../views/AccountLedgerView.vue'
 import ProfitLossView from '../views/ProfitLossView.vue'
 import BalanceSheetView from '../views/BalanceSheetView.vue'
+import ExpenseView from '../views/ExpenseView.vue'
 import UsersView from '../views/UsersView.vue'
 
 const routes = [
@@ -50,6 +51,7 @@ const routes = [
       { path: 'account-ledger', name: 'account-ledger', component: AccountLedgerView, meta: { perm: 'account.manage' } },
       { path: 'profit-loss', name: 'profit-loss', component: ProfitLossView, meta: { perm: 'account.manage' } },
       { path: 'balance-sheet', name: 'balance-sheet', component: BalanceSheetView, meta: { perm: 'account.manage' } },
+      { path: 'expense', name: 'expense', component: ExpenseView, meta: { perm: 'account.manage' } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],
   },

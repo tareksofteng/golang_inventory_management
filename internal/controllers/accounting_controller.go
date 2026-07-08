@@ -67,7 +67,8 @@ func (ctrl *AccountingController) GeneralLedger(c *gin.Context) {
 // @Success  200  {object}  map[string]interface{}
 // @Router   /accounting/profit-loss [get]
 func (ctrl *AccountingController) ProfitLoss(c *gin.Context) {
-	pl, err := ctrl.service.ProfitLoss()
+	from, to := parseDateRange(c)
+	pl, err := ctrl.service.ProfitLoss(from, to)
 	if err != nil {
 		response.InternalError(c, "Failed to build profit & loss")
 		return
