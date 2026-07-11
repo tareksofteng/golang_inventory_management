@@ -434,6 +434,11 @@ info:
 paths:
   /accounting/balance-sheet:
     get:
+      parameters:
+      - description: Snapshot date (YYYY-MM-DD), defaults to today
+        in: query
+        name: as_of
+        type: string
       produces:
       - application/json
       responses:
@@ -444,7 +449,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Balance Sheet — assets, liabilities and equity
+      summary: Balance Sheet — assets, liabilities and equity as of a date
       tags:
       - Accounting
   /accounting/ledger/{id}:

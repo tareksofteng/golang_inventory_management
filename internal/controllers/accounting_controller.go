@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"errors"
+	"time"
 
 	"inventory-api/internal/services"
 	"inventory-api/pkg/response"
@@ -76,15 +77,31 @@ func (ctrl *AccountingController) ProfitLoss(c *gin.Context) {
 	response.Success(c, "Profit & loss", pl)
 }
 
+// parseAsOf reads ?as_of=YYYY-MM-DD, defaulting to today. The returned cutoff is
+// EXCLUSIVE (next day 00:00) so the whole "as of" day is included in a `< to`
+// query.
+func parseAsOf(c *gin.Context) time.Time {
+	now := time.Now()
+	loc := now.Location()
+	asOf := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if v := c.Query("as_of"); v != "" {
+		if t, err := time.ParseInLocation("2006-01-02", v, loc); err == nil {
+			asOf = t
+		}
+	}
+	return asOf.AddDate(0, 0, 1)
+}
+
 // BalanceSheet godoc
-// @Summary  Balance Sheet — assets, liabilities and equity
+// @Summary  Balance Sheet — assets, liabilities and equity as of a date
 // @Tags     Accounting
 // @Produce  json
 // @Security BearerAuth
+// @Param    as_of  query  string  false  "Snapshot date (YYYY-MM-DD), defaults to today"
 // @Success  200  {object}  map[string]interface{}
 // @Router   /accounting/balance-sheet [get]
 func (ctrl *AccountingController) BalanceSheet(c *gin.Context) {
-	bs, err := ctrl.service.BalanceSheet()
+	bs, err := ctrl.service.BalanceSheet(parseAsOf(c))
 	if err != nil {
 		response.InternalError(c, "Failed to build balance sheet")
 		return

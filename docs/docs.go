@@ -28,7 +28,15 @@ const docTemplate = `{
                 "tags": [
                     "Accounting"
                 ],
-                "summary": "Balance Sheet — assets, liabilities and equity",
+                "summary": "Balance Sheet — assets, liabilities and equity as of a date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Snapshot date (YYYY-MM-DD), defaults to today",
+                        "name": "as_of",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

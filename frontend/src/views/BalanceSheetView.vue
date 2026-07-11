@@ -7,14 +7,21 @@ const data = ref(null)
 const loading = ref(true)
 const printPage = () => window.print()
 
-onMounted(async () => {
+const today = new Date()
+const pad = (n) => String(n).padStart(2, '0')
+const asOf = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`)
+
+async function load() {
+  loading.value = true
   try {
-    const res = await api.get('/accounting/balance-sheet')
+    const res = await api.get('/accounting/balance-sheet', { params: { as_of: asOf.value } })
     data.value = res.data.data
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(load)
 </script>
 
 <template>
@@ -24,9 +31,16 @@ onMounted(async () => {
       <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
     </div>
 
+    <div class="card mb-4 flex flex-wrap items-end gap-3 p-4 print:hidden">
+      <div><label class="label">As of</label><input v-model="asOf" type="date" class="input" /></div>
+      <button class="btn-primary" @click="load">Apply</button>
+    </div>
+
     <div v-if="loading" class="py-16 text-center text-slate-400">Loading…</div>
 
     <div v-else-if="data" class="space-y-4">
+      <p class="text-center text-sm text-slate-400">As of {{ data.as_of }}</p>
+
       <div class="grid gap-4 lg:grid-cols-2">
         <!-- Assets -->
         <div class="card overflow-hidden">

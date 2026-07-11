@@ -67,6 +67,7 @@ type ProfitLoss struct {
 }
 
 type BalanceSheet struct {
+	AsOf             string          `json:"as_of"`
 	Assets           []AccountAmount `json:"assets"`
 	TotalAssets      float64         `json:"total_assets"`
 	Liabilities      []AccountAmount `json:"liabilities"`
@@ -81,7 +82,7 @@ type AccountingService interface {
 	TrialBalance() (*TrialBalance, error)
 	GeneralLedger(accountID uint) (*GeneralLedger, error)
 	ProfitLoss(from, to time.Time) (*ProfitLoss, error)
-	BalanceSheet() (*BalanceSheet, error)
+	BalanceSheet(asOf time.Time) (*BalanceSheet, error)
 }
 
 type accountingService struct {
@@ -162,9 +163,10 @@ func (s *accountingService) GeneralLedger(accountID uint) (*GeneralLedger, error
 	return out, nil
 }
 
-// balances fetches per-account totals plus an id->account map.
-func (s *accountingService) balances() ([]repositories.AccountBalance, map[uint]models.Account, error) {
-	rows, err := s.journalRepo.TrialBalance()
+// balancesBetween fetches per-account totals restricted to a date range (for
+// period reports), plus an id->account map.
+func (s *accountingService) balancesBetween(from, to time.Time) ([]repositories.AccountBalance, map[uint]models.Account, error) {
+	rows, err := s.journalRepo.TrialBalanceBetween(from, to)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -179,9 +181,10 @@ func (s *accountingService) balances() ([]repositories.AccountBalance, map[uint]
 	return rows, byID, nil
 }
 
-// balancesBetween is balances() restricted to a date range (for period reports).
-func (s *accountingService) balancesBetween(from, to time.Time) ([]repositories.AccountBalance, map[uint]models.Account, error) {
-	rows, err := s.journalRepo.TrialBalanceBetween(from, to)
+// balancesAsOf is balances() restricted to entries before a cutoff date — a
+// point-in-time snapshot for the Balance Sheet.
+func (s *accountingService) balancesAsOf(to time.Time) ([]repositories.AccountBalance, map[uint]models.Account, error) {
+	rows, err := s.journalRepo.TrialBalanceAsOf(to)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -237,12 +240,12 @@ func (s *accountingService) ProfitLoss(from, to time.Time) (*ProfitLoss, error) 
 	return pl, nil
 }
 
-func (s *accountingService) BalanceSheet() (*BalanceSheet, error) {
-	rows, byID, err := s.balances()
+func (s *accountingService) BalanceSheet(asOf time.Time) (*BalanceSheet, error) {
+	rows, byID, err := s.balancesAsOf(asOf)
 	if err != nil {
 		return nil, err
 	}
-	bs := &BalanceSheet{}
+	bs := &BalanceSheet{AsOf: asOf.AddDate(0, 0, -1).Format("2006-01-02")}
 	var equityBase, totalIncome, totalExpense float64
 	for _, b := range rows {
 		acc := byID[b.AccountID]
