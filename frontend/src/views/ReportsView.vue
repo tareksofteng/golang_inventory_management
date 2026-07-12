@@ -22,8 +22,10 @@ const loading = ref(false)
 
 const today = new Date()
 const pad = (n) => String(n).padStart(2, '0')
-const from = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-01`)
-const to = ref(`${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`)
+// Default both ends to today; the user widens the range as needed.
+const iso = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`
+const from = ref(iso)
+const to = ref(iso)
 
 // Stock report: category filter.
 const categories = ref([])
