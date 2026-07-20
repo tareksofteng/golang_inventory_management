@@ -157,20 +157,29 @@ func (ctrl *AccountController) Update(c *gin.Context) {
 		response.BadRequest(c, "Invalid account id", nil)
 		return
 	}
+
 	var req UpdateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Validation failed", response.ValidationErrors(err))
 		return
 	}
-	data := &models.Account{Code: req.Code, Name: req.Name, Type: req.Type, IsActive: true}
+
+	isActive := true
 	if req.IsActive != nil {
-		data.IsActive = *req.IsActive
+		isActive = *req.IsActive
 	}
-	account, err := ctrl.service.Update(id, data)
+
+	account, err := ctrl.service.Update(id, &models.Account{
+		Code:     req.Code,
+		Name:     req.Name,
+		Type:     req.Type,
+		IsActive: isActive,
+	})
 	if err != nil {
 		handleAccountWriteError(c, err, "update")
 		return
 	}
+
 	response.Success(c, "Account updated successfully", account)
 }
 
