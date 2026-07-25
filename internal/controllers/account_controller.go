@@ -198,11 +198,14 @@ func (ctrl *AccountController) Delete(c *gin.Context) {
 		return
 	}
 	if err := ctrl.service.Delete(id); err != nil {
-		if errors.Is(err, services.ErrAccountNotFound) {
+		switch {
+		case errors.Is(err, services.ErrAccountNotFound):
 			response.NotFound(c, "Account not found")
-			return
+		case errors.Is(err, services.ErrAccountProtected):
+			response.Error(c, http.StatusConflict, err.Error(), nil)
+		default:
+			response.InternalError(c, "Failed to delete account")
 		}
-		response.InternalError(c, "Failed to delete account")
 		return
 	}
 	response.Success(c, "Account deleted successfully", nil)

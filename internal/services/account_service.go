@@ -13,7 +13,16 @@ var (
 	ErrAccountNotFound    = errors.New("account not found")
 	ErrAccountCodeTaken   = errors.New("account code already exists")
 	ErrInvalidAccountType = errors.New("invalid account type")
+	ErrAccountProtected   = errors.New("this account is used by automatic posting and cannot be deleted")
 )
+
+// systemAccountCodes are the accounts the auto-poster writes to on every
+// sale/purchase/payment/return. Deleting one would silently break posting, so
+// they are protected. Kept in sync with the codes in accounting_poster.go.
+var systemAccountCodes = map[string]bool{
+	accCash: true, accAR: true, accInventory: true,
+	accAP: true, accSales: true, accCOGS: true,
+}
 
 // validAccountTypes and their normal (increasing) side.
 var debitNormalTypes = map[string]bool{"asset": true, "expense": true}
@@ -104,8 +113,12 @@ func (s *accountService) Update(id uint, data *models.Account) (*models.Account,
 }
 
 func (s *accountService) Delete(id uint) error {
-	if _, err := s.Get(id); err != nil {
+	account, err := s.Get(id)
+	if err != nil {
 		return err
+	}
+	if systemAccountCodes[account.Code] {
+		return ErrAccountProtected
 	}
 	return s.repo.Delete(id)
 }
