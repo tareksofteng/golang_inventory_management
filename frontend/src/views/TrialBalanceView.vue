@@ -1,11 +1,21 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../lib/api'
+import { downloadCsv } from '../lib/csv'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })
 const data = ref(null)
 const loading = ref(true)
 const printPage = () => window.print()
+
+function exportCsv() {
+  if (!data.value) return
+  // Raw numbers (not ৳-formatted) so the spreadsheet can sum them.
+  const rows = data.value.rows.map((r) => [r.code, r.name, r.type, r.debit || 0, r.credit || 0])
+  rows.push(['', 'Totals', '', data.value.total_debit, data.value.total_credit])
+  const today = new Date().toISOString().slice(0, 10)
+  downloadCsv(`trial-balance-${today}.csv`, ['Code', 'Account', 'Type', 'Debit', 'Credit'], rows)
+}
 
 onMounted(async () => {
   try {
@@ -21,7 +31,10 @@ onMounted(async () => {
   <div>
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold">Trial Balance</h1>
-      <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
+      <div class="flex gap-2 print:hidden">
+        <button class="btn-ghost" :disabled="!data || !data.rows.length" @click="exportCsv">⬇️ Export CSV</button>
+        <button class="btn-ghost" @click="printPage">🖨️ Print</button>
+      </div>
     </div>
 
     <div v-if="loading" class="py-16 text-center text-slate-400">Loading…</div>
