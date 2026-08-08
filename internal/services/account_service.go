@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"strings"
 
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
@@ -51,6 +52,8 @@ func NewAccountService(repo repositories.AccountRepository) AccountService {
 }
 
 func (s *accountService) Create(account *models.Account) (*models.Account, error) {
+	account.Code = strings.TrimSpace(account.Code)
+	account.Name = strings.TrimSpace(account.Name)
 	if !isValidAccountType(account.Type) {
 		return nil, ErrInvalidAccountType
 	}
@@ -87,6 +90,8 @@ func (s *accountService) Get(id uint) (*models.Account, error) {
 }
 
 func (s *accountService) Update(id uint, data *models.Account) (*models.Account, error) {
+	data.Code = strings.TrimSpace(data.Code)
+	data.Name = strings.TrimSpace(data.Name)
 	if !isValidAccountType(data.Type) {
 		return nil, ErrInvalidAccountType
 	}
