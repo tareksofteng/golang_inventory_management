@@ -55,6 +55,9 @@ testable without a HTTP request.
 
 ## Why it looks the way it does
 
+The longer versions, with the options that were rejected and what each choice costs, are in
+[`docs/decisions/`](docs/decisions/).
+
 **Double-entry from the first commit, not bolted on.** Every posting writes balanced debit
 and credit lines. Reports are derived from the journal rather than stored as running
 totals, so a corrected entry corrects every downstream report automatically.
