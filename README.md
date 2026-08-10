@@ -5,6 +5,7 @@ Vue 3 dashboard on top. Built to learn Go properly by writing something with rea
 constraints: money that has to balance, stock that has to reconcile, and reports an
 accountant would recognise.
 
+[![CI](https://github.com/tareksofteng/golang_inventory_management/actions/workflows/ci.yml/badge.svg)](https://github.com/tareksofteng/golang_inventory_management/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![Gin](https://img.shields.io/badge/Gin-1.12-008ECF)
 ![GORM](https://img.shields.io/badge/GORM-1.31-red)
@@ -96,6 +97,31 @@ Swagger UI is mounted at `/swagger/index.html`. Regenerate after changing annota
 swag init -g cmd/api/main.go
 ```
 
+## Tests
+
+```bash
+go test ./...
+```
+
+The suite covers the parts where a bug is expensive and silent:
+
+- **Auto-posting balances.** Every transaction type (sale, purchase, both payment
+  directions, both return types) is posted through a recording fake and asserted to have
+  equal debits and credits, at least two lines, no line carrying both a debit and a credit,
+  and no line pointing at an unresolved account. An unbalanced entry would corrupt the
+  trial balance and both statements without raising an error anywhere.
+- **Invoice totals.** Tax is charged on the net amount, the discount is clamped to
+  `[0, subtotal]`, and the grand total is always `taxable + tax` across a matrix of
+  subtotals, discounts and rate bands. The clamp is the one that matters: an over-discount
+  would otherwise flip the sign of the VAT.
+- **Authorization matrix.** Positive and negative cases per role, including the deliberate
+  rule that an admin cannot manage users, and that `Permissions()` hands back a copy so a
+  caller cannot mutate the policy for the whole process.
+- **Pagination.** Bad input falls back to defaults, `per_page` is clamped to the ceiling,
+  and the OFFSET and page-count arithmetic is checked at the boundaries.
+
+CI runs `gofmt`, `go build`, `go vet` and the tests on every push and pull request.
+
 ## Stack
 
 Go 1.26 · Gin · GORM (MySQL driver) · golang-jwt v5 · validator/v10 · swaggo ·
@@ -103,5 +129,5 @@ Vue 3 · Vite · Tailwind CSS
 
 ## Status
 
-Active. Working next on test coverage for the posting rules and stock reconciliation, and
-on Docker packaging for a one-command run.
+Active. Working next on stock reconciliation coverage and Docker packaging for a
+one-command run.

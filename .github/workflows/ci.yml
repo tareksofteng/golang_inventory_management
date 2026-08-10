@@ -1,0 +1,37 @@
+name: CI
+
+# Runs on every branch. Pull requests here come from branches in this same
+# repository, so a push trigger already covers every PR commit without the
+# duplicate runs a second pull_request trigger would add.
+on: push
+
+jobs:
+  go:
+    name: Build, vet and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-clean:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./... -count=1
