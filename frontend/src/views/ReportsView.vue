@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api, { assetUrl } from '../lib/api'
+import { downloadCsv } from '../lib/csv'
 
 const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
@@ -52,6 +53,42 @@ watch(categoryId, () => {
 const fmtDate = (d) => new Date(d).toLocaleDateString()
 const printPage = () => window.print()
 
+// Build headers + raw-number rows per report type, then download as CSV.
+function buildCsv() {
+  const d = data.value
+  if (!d) return null
+  if (type.value === 'sales' || type.value === 'purchases') {
+    const party = type.value === 'sales' ? 'Customer' : 'Supplier'
+    const rows = d.items.map((r) => [
+      r.invoice_no, (r.customer || r.supplier)?.name || '', fmtDate(r.created_at),
+      r.total_amount, r.paid_amount, r.due,
+    ])
+    return { headers: ['Invoice', party, 'Date', 'Total', 'Paid', 'Due'], rows }
+  }
+  if (type.value === 'customer-due' || type.value === 'supplier-due') {
+    const list = d.customers || d.suppliers || []
+    return { headers: ['Name', 'Phone', 'Due'], rows: list.map((r) => [r.name, r.phone || '', r.due]) }
+  }
+  if (type.value === 'stock') {
+    return {
+      headers: ['Product', 'SKU', 'Category', 'Qty', 'Cost', 'Value'],
+      rows: d.items.map((p) => [p.name, p.sku, p.category?.name || '', p.quantity, p.cost_price, p.quantity * p.cost_price]),
+    }
+  }
+  return null
+}
+
+const canExport = computed(() => {
+  const c = buildCsv()
+  return !!c && c.rows.length > 0
+})
+
+function exportCsv() {
+  const c = buildCsv()
+  if (!c || !c.rows.length) return
+  downloadCsv(`${type.value}-report-${new Date().toISOString().slice(0, 10)}.csv`, c.headers, c.rows)
+}
+
 onMounted(async () => {
   try {
     const res = await api.get('/categories', { params: { per_page: 100 } })
@@ -67,7 +104,10 @@ onMounted(async () => {
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">{{ active.label }}</h1>
-      <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
+      <div class="flex gap-2 print:hidden">
+        <button class="btn-ghost" :disabled="!canExport" @click="exportCsv">⬇️ Export CSV</button>
+        <button class="btn-ghost" @click="printPage">🖨️ Print</button>
+      </div>
     </div>
 
     <!-- Date range (sales/purchase only) -->
