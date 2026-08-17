@@ -1,11 +1,27 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../lib/api'
+import { downloadCsv } from '../lib/csv'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })
 const data = ref(null)
 const loading = ref(true)
 const printPage = () => window.print()
+
+function exportCsv() {
+  const d = data.value
+  if (!d) return
+  const rows = []
+  const section = (title, lines) => (lines || []).forEach((l) => rows.push([title, l.code, l.name, l.amount]))
+  section('Asset', d.assets)
+  rows.push(['', '', 'Total Assets', d.total_assets])
+  section('Liability', d.liabilities)
+  rows.push(['', '', 'Total Liabilities', d.total_liabilities])
+  section('Equity', d.equity)
+  rows.push(['Equity', '', 'Retained Earnings', d.net_profit])
+  rows.push(['', '', 'Total Equity', d.total_equity])
+  downloadCsv(`balance-sheet-${d.as_of}.csv`, ['Section', 'Code', 'Account', 'Amount'], rows)
+}
 
 const today = new Date()
 const pad = (n) => String(n).padStart(2, '0')
@@ -28,7 +44,10 @@ onMounted(load)
   <div>
     <div class="mb-6 flex items-center justify-between">
       <h1 class="text-2xl font-bold">Balance Sheet</h1>
-      <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
+      <div class="flex gap-2 print:hidden">
+        <button class="btn-ghost" :disabled="!data" @click="exportCsv">⬇️ Export CSV</button>
+        <button class="btn-ghost" @click="printPage">🖨️ Print</button>
+      </div>
     </div>
 
     <div class="card mb-4 flex flex-wrap items-end gap-3 p-4 print:hidden">
