@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../lib/api'
+import { downloadCsv } from '../lib/csv'
 
 const route = useRoute()
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
@@ -17,6 +18,20 @@ const loading = ref(false)
 
 const parties = computed(() => (mode.value === 'customer' ? customers.value : suppliers.value))
 const printPage = () => window.print()
+
+function exportCsv() {
+  if (!ledger.value) return
+  const rows = ledger.value.entries.map((e) => [
+    e.date, e.type, e.ref || '', e.debit || 0, e.credit || 0, e.balance,
+  ])
+  rows.push(['', '', 'Closing Balance', '', '', ledger.value.closing_balance])
+  const name = (ledger.value.party_name || mode.value).replace(/[^a-z0-9]+/gi, '-')
+  downloadCsv(
+    `${mode.value}-ledger-${name}-${new Date().toISOString().slice(0, 10)}.csv`,
+    ['Date', 'Type', 'Reference', 'Debit', 'Credit', 'Balance'],
+    rows,
+  )
+}
 
 async function load() {
   if (!partyId.value) {
@@ -57,7 +72,10 @@ onMounted(async () => {
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">{{ mode === 'customer' ? 'Customer Ledger' : 'Supplier Ledger' }}</h1>
-      <button class="btn-ghost print:hidden" @click="printPage">🖨️ Print</button>
+      <div class="flex gap-2 print:hidden">
+        <button class="btn-ghost" :disabled="!ledger || !ledger.entries.length" @click="exportCsv">⬇️ Export CSV</button>
+        <button class="btn-ghost" @click="printPage">🖨️ Print</button>
+      </div>
     </div>
 
     <div class="mb-4 max-w-sm print:hidden">
