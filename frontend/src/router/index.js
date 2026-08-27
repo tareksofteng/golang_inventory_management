@@ -55,6 +55,8 @@ const routes = [
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
     ],
   },
+  // Catch-all: unknown URLs fall back to the dashboard instead of a blank page.
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 const router = createRouter({
