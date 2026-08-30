@@ -48,15 +48,18 @@ func (ctrl *AccountingController) GeneralLedger(c *gin.Context) {
 		response.BadRequest(c, "Invalid account id", nil)
 		return
 	}
+
 	gl, err := ctrl.service.GeneralLedger(id)
 	if err != nil {
-		if errors.Is(err, services.ErrAccountNotFound) {
+		switch {
+		case errors.Is(err, services.ErrAccountNotFound):
 			response.NotFound(c, "Account not found")
-			return
+		default:
+			response.InternalError(c, "Failed to build general ledger")
 		}
-		response.InternalError(c, "Failed to build general ledger")
 		return
 	}
+
 	response.Success(c, "General ledger", gl)
 }
 
