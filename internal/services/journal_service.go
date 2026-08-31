@@ -35,7 +35,7 @@ type CreateJournalInput struct {
 
 type JournalService interface {
 	Create(input CreateJournalInput) (*models.JournalEntry, error)
-	List(page, perPage int) ([]models.JournalEntry, int64, error)
+	List(search string, page, perPage int) ([]models.JournalEntry, int64, error)
 	Get(id uint) (*models.JournalEntry, error)
 }
 
@@ -102,8 +102,8 @@ func (s *journalService) Create(input CreateJournalInput) (*models.JournalEntry,
 	return s.repo.FindByID(entry.ID)
 }
 
-func (s *journalService) List(page, perPage int) ([]models.JournalEntry, int64, error) {
-	return s.repo.FindAll((page-1)*perPage, perPage)
+func (s *journalService) List(search string, page, perPage int) ([]models.JournalEntry, int64, error) {
+	return s.repo.FindAll(search, (page-1)*perPage, perPage)
 }
 
 func (s *journalService) Get(id uint) (*models.JournalEntry, error) {

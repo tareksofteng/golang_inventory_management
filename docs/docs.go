@@ -711,6 +711,12 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "per_page",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by entry number or reference",
+                        "name": "search",
+                        "in": "query"
                     }
                 ],
                 "responses": {

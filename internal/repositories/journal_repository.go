@@ -28,7 +28,7 @@ type LedgerLine struct {
 type JournalRepository interface {
 	Create(entry *models.JournalEntry) error
 	CountAll() (int64, error)
-	FindAll(offset, limit int) ([]models.JournalEntry, int64, error)
+	FindAll(search string, offset, limit int) ([]models.JournalEntry, int64, error)
 	FindByID(id uint) (*models.JournalEntry, error)
 	TrialBalance() ([]AccountBalance, error)
 	TrialBalanceBetween(from, to time.Time) ([]AccountBalance, error)
@@ -57,13 +57,20 @@ func (r *journalRepository) CountAll() (int64, error) {
 	return n, err
 }
 
-func (r *journalRepository) FindAll(offset, limit int) ([]models.JournalEntry, int64, error) {
+func (r *journalRepository) FindAll(search string, offset, limit int) ([]models.JournalEntry, int64, error) {
 	var entries []models.JournalEntry
 	var total int64
-	if err := r.db.Model(&models.JournalEntry{}).Count(&total).Error; err != nil {
+
+	query := r.db.Model(&models.JournalEntry{})
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("entry_no LIKE ? OR reference LIKE ?", like, like)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	err := r.db.Preload("Lines.Account").Order("id DESC").Offset(offset).Limit(limit).Find(&entries).Error
+	err := query.Preload("Lines.Account").Order("id DESC").Offset(offset).Limit(limit).Find(&entries).Error
 	return entries, total, err
 }
 

@@ -90,13 +90,14 @@ func (ctrl *JournalController) Create(c *gin.Context) {
 // @Tags     Journal
 // @Produce  json
 // @Security BearerAuth
-// @Param    page      query     int  false  "Page number"
-// @Param    per_page  query     int  false  "Items per page"
+// @Param    page      query     int     false  "Page number"
+// @Param    per_page  query     int     false  "Items per page"
+// @Param    search    query     string  false  "Search by entry number or reference"
 // @Success  200       {object}  map[string]interface{}
 // @Router   /journal [get]
 func (ctrl *JournalController) List(c *gin.Context) {
 	p := pagination.Parse(c)
-	entries, total, err := ctrl.service.List(p.Page, p.PerPage)
+	entries, total, err := ctrl.service.List(p.Search, p.Page, p.PerPage)
 	if err != nil {
 		response.InternalError(c, "Failed to fetch journal entries")
 		return
