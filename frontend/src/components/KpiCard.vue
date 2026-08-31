@@ -19,11 +19,18 @@ defineProps({
   hint: String,
   tone: { type: String, default: 'brand' },
   compact: Boolean,
+  // When set, the whole tile becomes a link to this route.
+  to: { type: [String, Object], default: null },
 })
 </script>
 
 <template>
-  <div class="card p-4 transition hover:shadow-md sm:p-5">
+  <component
+    :is="to ? 'RouterLink' : 'div'"
+    :to="to || undefined"
+    class="card block p-4 transition hover:shadow-md sm:p-5"
+    :class="to ? 'hover:-translate-y-0.5 hover:border-brand-300 dark:hover:border-brand-600' : ''"
+  >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <div class="truncate text-sm text-slate-500 dark:text-slate-400">{{ label }}</div>
@@ -37,5 +44,5 @@ defineProps({
         <Icon :name="icon" :size="20" />
       </span>
     </div>
-  </div>
+  </component>
 </template>

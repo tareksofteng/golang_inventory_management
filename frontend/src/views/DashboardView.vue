@@ -47,20 +47,20 @@ onMounted(async () => {
 
     <!-- Primary money KPIs -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Total sales" :value="money(data.finance.total_sales)" icon="cart" tone="emerald" />
-      <KpiCard label="Total purchase" :value="money(data.finance.total_purchase)" icon="bag" tone="blue" />
-      <KpiCard label="Receivable" :value="money(data.finance.receivable)" icon="inbound" tone="amber" hint="Due from customers" />
-      <KpiCard label="Payable" :value="money(data.finance.payable)" icon="outbound" tone="red" hint="Due to suppliers" />
+      <KpiCard label="Total sales" :value="money(data.finance.total_sales)" icon="cart" tone="emerald" to="/reports/sales" />
+      <KpiCard label="Total purchase" :value="money(data.finance.total_purchase)" icon="bag" tone="blue" to="/reports/purchases" />
+      <KpiCard label="Receivable" :value="money(data.finance.receivable)" icon="inbound" tone="amber" hint="Due from customers" to="/reports/customer-due" />
+      <KpiCard label="Payable" :value="money(data.finance.payable)" icon="outbound" tone="red" hint="Due to suppliers" to="/reports/supplier-due" />
     </div>
 
     <!-- Secondary metrics — deliberately lighter than the row above -->
     <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <KpiCard compact label="Today's sales" :value="money(data.finance.today_sales)" icon="calendar" tone="slate" />
       <KpiCard compact label="This month" :value="money(data.finance.month_sales)" icon="trending" tone="slate" />
-      <KpiCard compact label="Stock value" :value="money(data.stock_value)" icon="wallet" tone="slate" />
+      <KpiCard compact label="Stock value" :value="money(data.stock_value)" icon="wallet" tone="slate" to="/reports/stock" />
       <KpiCard
         compact label="Low stock items" :value="data.low_stock_count" icon="alert"
-        :tone="data.low_stock_count > 0 ? 'amber' : 'slate'"
+        :tone="data.low_stock_count > 0 ? 'amber' : 'slate'" to="/reports/stock"
       />
     </div>
 
