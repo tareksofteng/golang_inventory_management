@@ -10,6 +10,7 @@ const meta = ref({ page: 1, total: 0, total_pages: 1 })
 const page = ref(1)
 const loading = ref(false)
 const accounts = ref([])
+const search = ref('')
 
 const showModal = ref(false)
 const saving = ref(false)
@@ -29,12 +30,24 @@ const today = () => new Date().toISOString().slice(0, 10)
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get('/journal', { params: { page: page.value, per_page: 10 } })
+    const params = { page: page.value, per_page: 10 }
+    if (search.value.trim()) params.search = search.value.trim()
+    const { data } = await api.get('/journal', { params })
     entries.value = data.data
     meta.value = data.meta
   } finally {
     loading.value = false
   }
+}
+
+// Debounce search input, resetting to the first page on each new query.
+let searchTimer
+function onSearch() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    load()
+  }, 300)
 }
 
 const newLine = () => ({ account_id: accounts.value[0]?.id || '', debit: 0, credit: 0 })
@@ -93,9 +106,18 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Journal Entries</h1>
-      <button class="btn-primary" @click="openCreate">+ New Entry</button>
+      <div class="flex items-center gap-2">
+        <input
+          v-model="search"
+          type="search"
+          class="input max-w-xs"
+          placeholder="Search entry no. or reference…"
+          @input="onSearch"
+        />
+        <button class="btn-primary" @click="openCreate">+ New Entry</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -110,7 +132,7 @@ onMounted(async () => {
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             <tr v-if="loading"><td colspan="6" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
-            <tr v-else-if="!entries.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">No journal entries yet</td></tr>
+            <tr v-else-if="!entries.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">{{ search.trim() ? 'No entries match your search' : 'No journal entries yet' }}</td></tr>
             <tr v-for="e in entries" :key="e.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ e.entry_no }}</td>
               <td class="px-4 py-3 text-slate-400">{{ new Date(e.date).toLocaleDateString() }}</td>
