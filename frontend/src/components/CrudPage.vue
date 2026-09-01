@@ -153,7 +153,9 @@ defineExpose({ load })
               <td :colspan="columns.length + 1" class="px-4 py-10 text-center text-slate-400">Loading…</td>
             </tr>
             <tr v-else-if="!items.length">
-              <td :colspan="columns.length + 1" class="px-4 py-10 text-center text-slate-400">No records found</td>
+              <td :colspan="columns.length + 1" class="px-4 py-10 text-center text-slate-400">
+                {{ search.trim() ? `No records match “${search.trim()}”` : 'No records found' }}
+              </td>
             </tr>
             <tr v-for="row in items" :key="row.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td v-for="col in columns" :key="col.key" class="px-4 py-3">
