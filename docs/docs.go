@@ -774,6 +774,38 @@ const docTemplate = `{
                 }
             }
         },
+        "/journal/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "Journal"
+                ],
+                "summary": "Export journal entries as CSV (one row per line)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by entry number or reference",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/journal/{id}": {
             "get": {
                 "security": [

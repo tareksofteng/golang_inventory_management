@@ -927,6 +927,25 @@ paths:
       summary: Get a journal entry with its lines
       tags:
       - Journal
+  /journal/export:
+    get:
+      parameters:
+      - description: Search by entry number or reference
+        in: query
+        name: search
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export journal entries as CSV (one row per line)
+      tags:
+      - Journal
   /ledger/customer/{id}:
     get:
       parameters:

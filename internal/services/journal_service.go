@@ -36,6 +36,7 @@ type CreateJournalInput struct {
 type JournalService interface {
 	Create(input CreateJournalInput) (*models.JournalEntry, error)
 	List(search string, page, perPage int) ([]models.JournalEntry, int64, error)
+	Export(search string) ([]models.JournalEntry, error)
 	Get(id uint) (*models.JournalEntry, error)
 }
 
@@ -104,6 +105,12 @@ func (s *journalService) Create(input CreateJournalInput) (*models.JournalEntry,
 
 func (s *journalService) List(search string, page, perPage int) ([]models.JournalEntry, int64, error) {
 	return s.repo.FindAll(search, (page-1)*perPage, perPage)
+}
+
+// Export returns every matching entry (no pagination) for a CSV download.
+func (s *journalService) Export(search string) ([]models.JournalEntry, error) {
+	entries, _, err := s.repo.FindAll(search, 0, -1)
+	return entries, err
 }
 
 func (s *journalService) Get(id uint) (*models.JournalEntry, error) {

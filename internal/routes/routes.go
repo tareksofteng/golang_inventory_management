@@ -89,6 +89,7 @@ func registerAccountingRoutes(rg *gin.RouterGroup, acc *controllers.AccountContr
 	{
 		j.POST("", jnl.Create)
 		j.GET("", jnl.List)
+		j.GET("/export", jnl.Export)
 		j.GET("/:id", jnl.Get)
 	}
 

@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"inventory-api/internal/middleware"
@@ -105,6 +108,49 @@ func (ctrl *JournalController) List(c *gin.Context) {
 	response.Paginated(c, "Journal entries", entries, response.Meta{
 		Page: p.Page, PerPage: p.PerPage, Total: total, TotalPages: pagination.TotalPages(total, p.PerPage),
 	})
+}
+
+// Export godoc
+// @Summary  Export journal entries as CSV (one row per line)
+// @Tags     Journal
+// @Produce  text/csv
+// @Security BearerAuth
+// @Param    search  query  string  false  "Search by entry number or reference"
+// @Success  200     {file}  file
+// @Router   /journal/export [get]
+func (ctrl *JournalController) Export(c *gin.Context) {
+	entries, err := ctrl.service.Export(c.Query("search"))
+	if err != nil {
+		response.InternalError(c, "Failed to export journal entries")
+		return
+	}
+
+	filename := fmt.Sprintf("journal-entries-%s.csv", time.Now().Format("2006-01-02"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+
+	w := csv.NewWriter(c.Writer)
+	defer w.Flush()
+
+	_ = w.Write([]string{"Entry No", "Date", "Reference", "Account", "Debit", "Credit", "Note"})
+	for _, e := range entries {
+		date := e.Date.Format("2006-01-02")
+		for _, l := range e.Lines {
+			account := ""
+			if l.Account != nil {
+				account = l.Account.Name
+			}
+			_ = w.Write([]string{
+				e.EntryNo,
+				date,
+				e.Reference,
+				account,
+				strconv.FormatFloat(l.Debit, 'f', 2, 64),
+				strconv.FormatFloat(l.Credit, 'f', 2, 64),
+				e.Note,
+			})
+		}
+	}
 }
 
 // Get godoc

@@ -50,6 +50,25 @@ function onSearch() {
   }, 300)
 }
 
+// Download the current (search-filtered) journal as a CSV file. We fetch it as a
+// blob through the api instance so the auth token is attached automatically.
+const exporting = ref(false)
+async function exportCsv() {
+  exporting.value = true
+  try {
+    const params = search.value.trim() ? { search: search.value.trim() } : {}
+    const { data } = await api.get('/journal/export', { params, responseType: 'blob' })
+    const url = URL.createObjectURL(data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `journal-entries-${today()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    exporting.value = false
+  }
+}
+
 const newLine = () => ({ account_id: accounts.value[0]?.id || '', debit: 0, credit: 0 })
 
 function openCreate() {
@@ -116,6 +135,9 @@ onMounted(async () => {
           placeholder="Search entry no. or reference…"
           @input="onSearch"
         />
+        <button class="btn-ghost whitespace-nowrap" :disabled="exporting || !entries.length" @click="exportCsv">
+          {{ exporting ? 'Exporting…' : 'Export CSV' }}
+        </button>
         <button class="btn-primary" @click="openCreate">+ New Entry</button>
       </div>
     </div>
