@@ -28,7 +28,7 @@ type LedgerLine struct {
 type JournalRepository interface {
 	Create(entry *models.JournalEntry) error
 	CountAll() (int64, error)
-	FindAll(search string, offset, limit int) ([]models.JournalEntry, int64, error)
+	FindAll(search string, from, to time.Time, offset, limit int) ([]models.JournalEntry, int64, error)
 	FindByID(id uint) (*models.JournalEntry, error)
 	TrialBalance() ([]AccountBalance, error)
 	TrialBalanceBetween(from, to time.Time) ([]AccountBalance, error)
@@ -57,7 +57,9 @@ func (r *journalRepository) CountAll() (int64, error) {
 	return n, err
 }
 
-func (r *journalRepository) FindAll(search string, offset, limit int) ([]models.JournalEntry, int64, error) {
+// FindAll lists entries newest-first, optionally filtered by a search term and a
+// [from, to) date window. Zero-value from/to leave that bound open.
+func (r *journalRepository) FindAll(search string, from, to time.Time, offset, limit int) ([]models.JournalEntry, int64, error) {
 	var entries []models.JournalEntry
 	var total int64
 
@@ -65,6 +67,12 @@ func (r *journalRepository) FindAll(search string, offset, limit int) ([]models.
 	if search != "" {
 		like := "%" + search + "%"
 		query = query.Where("entry_no LIKE ? OR reference LIKE ?", like, like)
+	}
+	if !from.IsZero() {
+		query = query.Where("date >= ?", from)
+	}
+	if !to.IsZero() {
+		query = query.Where("date < ?", to)
 	}
 
 	if err := query.Count(&total).Error; err != nil {

@@ -717,6 +717,18 @@ const docTemplate = `{
                         "description": "Search by entry number or reference",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "to",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -793,6 +805,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Search by entry number or reference",
                         "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "to",
                         "in": "query"
                     }
                 ],
