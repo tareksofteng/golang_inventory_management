@@ -96,11 +96,14 @@ func (ctrl *JournalController) Create(c *gin.Context) {
 // @Param    page      query     int     false  "Page number"
 // @Param    per_page  query     int     false  "Items per page"
 // @Param    search    query     string  false  "Search by entry number or reference"
+// @Param    from      query     string  false  "Start date (YYYY-MM-DD, inclusive)"
+// @Param    to        query     string  false  "End date (YYYY-MM-DD, inclusive)"
 // @Success  200       {object}  map[string]interface{}
 // @Router   /journal [get]
 func (ctrl *JournalController) List(c *gin.Context) {
 	p := pagination.Parse(c)
-	entries, total, err := ctrl.service.List(p.Search, p.Page, p.PerPage)
+	from, to := parseOptionalDateRange(c)
+	entries, total, err := ctrl.service.List(p.Search, from, to, p.Page, p.PerPage)
 	if err != nil {
 		response.InternalError(c, "Failed to fetch journal entries")
 		return
@@ -110,16 +113,39 @@ func (ctrl *JournalController) List(c *gin.Context) {
 	})
 }
 
+// parseOptionalDateRange reads ?from / ?to (YYYY-MM-DD). Unlike the reports'
+// parseDateRange, missing bounds stay zero (unbounded) rather than defaulting to
+// the current month. The returned `to` is exclusive (next day) so the whole end
+// day is included.
+func parseOptionalDateRange(c *gin.Context) (time.Time, time.Time) {
+	loc := time.Now().Location()
+	var from, to time.Time
+	if f := c.Query("from"); f != "" {
+		if t, err := time.ParseInLocation("2006-01-02", f, loc); err == nil {
+			from = t
+		}
+	}
+	if t2 := c.Query("to"); t2 != "" {
+		if t, err := time.ParseInLocation("2006-01-02", t2, loc); err == nil {
+			to = t.AddDate(0, 0, 1)
+		}
+	}
+	return from, to
+}
+
 // Export godoc
 // @Summary  Export journal entries as CSV (one row per line)
 // @Tags     Journal
 // @Produce  text/csv
 // @Security BearerAuth
 // @Param    search  query  string  false  "Search by entry number or reference"
+// @Param    from    query  string  false  "Start date (YYYY-MM-DD, inclusive)"
+// @Param    to      query  string  false  "End date (YYYY-MM-DD, inclusive)"
 // @Success  200     {file}  file
 // @Router   /journal/export [get]
 func (ctrl *JournalController) Export(c *gin.Context) {
-	entries, err := ctrl.service.Export(c.Query("search"))
+	from, to := parseOptionalDateRange(c)
+	entries, err := ctrl.service.Export(c.Query("search"), from, to)
 	if err != nil {
 		response.InternalError(c, "Failed to export journal entries")
 		return

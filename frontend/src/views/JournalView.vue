@@ -11,6 +11,8 @@ const page = ref(1)
 const loading = ref(false)
 const accounts = ref([])
 const search = ref('')
+const from = ref('')
+const to = ref('')
 
 const showModal = ref(false)
 const saving = ref(false)
@@ -27,12 +29,21 @@ const balanced = computed(() => Math.abs(diff.value) < 0.005 && totalDebit.value
 const entryTotal = (e) => (e.lines || []).reduce((s, l) => s + Number(l.debit || 0), 0)
 const today = () => new Date().toISOString().slice(0, 10)
 
+// Shared search + date-range filters, so the list and the CSV export stay in sync.
+function filterParams() {
+  const params = {}
+  if (search.value.trim()) params.search = search.value.trim()
+  if (from.value) params.from = from.value
+  if (to.value) params.to = to.value
+  return params
+}
+
 async function load() {
   loading.value = true
   try {
-    const params = { page: page.value, per_page: 10 }
-    if (search.value.trim()) params.search = search.value.trim()
-    const { data } = await api.get('/journal', { params })
+    const { data } = await api.get('/journal', {
+      params: { page: page.value, per_page: 10, ...filterParams() },
+    })
     entries.value = data.data
     meta.value = data.meta
   } finally {
@@ -40,14 +51,17 @@ async function load() {
   }
 }
 
-// Debounce search input, resetting to the first page on each new query.
+// Any filter change resets to the first page before reloading.
+function applyFilters() {
+  page.value = 1
+  load()
+}
+
+// Debounce the free-text search; date pickers apply immediately.
 let searchTimer
 function onSearch() {
   clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    page.value = 1
-    load()
-  }, 300)
+  searchTimer = setTimeout(applyFilters, 300)
 }
 
 // Download the current (search-filtered) journal as a CSV file. We fetch it as a
@@ -56,8 +70,7 @@ const exporting = ref(false)
 async function exportCsv() {
   exporting.value = true
   try {
-    const params = search.value.trim() ? { search: search.value.trim() } : {}
-    const { data } = await api.get('/journal/export', { params, responseType: 'blob' })
+    const { data } = await api.get('/journal/export', { params: filterParams(), responseType: 'blob' })
     const url = URL.createObjectURL(data)
     const a = document.createElement('a')
     a.href = url
@@ -127,7 +140,7 @@ onMounted(async () => {
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Journal Entries</h1>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <input
           v-model="search"
           type="search"
@@ -135,6 +148,11 @@ onMounted(async () => {
           placeholder="Search entry no. or reference…"
           @input="onSearch"
         />
+        <div class="flex items-center gap-1 text-sm text-slate-400">
+          <input v-model="from" type="date" class="input" title="From date" @change="applyFilters" />
+          <span>–</span>
+          <input v-model="to" type="date" class="input" title="To date" @change="applyFilters" />
+        </div>
         <button class="btn-ghost whitespace-nowrap" :disabled="exporting || !entries.length" @click="exportCsv">
           {{ exporting ? 'Exporting…' : 'Export CSV' }}
         </button>
@@ -154,7 +172,7 @@ onMounted(async () => {
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             <tr v-if="loading"><td colspan="6" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
-            <tr v-else-if="!entries.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">{{ search.trim() ? 'No entries match your search' : 'No journal entries yet' }}</td></tr>
+            <tr v-else-if="!entries.length"><td colspan="6" class="px-4 py-10 text-center text-slate-400">{{ (search.trim() || from || to) ? 'No entries match your filters' : 'No journal entries yet' }}</td></tr>
             <tr v-for="e in entries" :key="e.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ e.entry_no }}</td>
               <td class="px-4 py-3 text-slate-400">{{ new Date(e.date).toLocaleDateString() }}</td>
