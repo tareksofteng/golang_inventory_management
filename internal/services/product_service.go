@@ -19,7 +19,7 @@ var (
 
 type ProductService interface {
 	Create(product *models.Product) (*models.Product, error)
-	List(search string, page, perPage int) ([]models.Product, int64, error)
+	List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error)
 	Get(id uint) (*models.Product, error)
 	Update(id uint, data *models.Product) (*models.Product, error)
 	Delete(id uint) error
@@ -84,9 +84,17 @@ func (s *productService) Create(product *models.Product) (*models.Product, error
 	return s.repo.FindByID(product.ID)
 }
 
-func (s *productService) List(search string, page, perPage int) ([]models.Product, int64, error) {
+// LowStockThreshold: products with quantity at or below this are "low stock".
+// Kept in sync with the dashboard's threshold and the Products table badge.
+const LowStockThreshold = 10
+
+func (s *productService) List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error) {
 	offset := (page - 1) * perPage
-	return s.repo.FindAll(search, offset, perPage)
+	threshold := 0
+	if lowStockOnly {
+		threshold = LowStockThreshold
+	}
+	return s.repo.FindAll(search, threshold, offset, perPage)
 }
 
 func (s *productService) Get(id uint) (*models.Product, error) {

@@ -10,7 +10,7 @@ import (
 // Category and Supplier associations so the API can return nested objects.
 type ProductRepository interface {
 	Create(product *models.Product) error
-	FindAll(search string, offset, limit int) ([]models.Product, int64, error)
+	FindAll(search string, lowStockThreshold, offset, limit int) ([]models.Product, int64, error)
 	FindByID(id uint) (*models.Product, error)
 	Update(product *models.Product) error
 	Delete(id uint) error
@@ -32,7 +32,9 @@ func (r *productRepository) Create(product *models.Product) error {
 // FindAll returns paginated products (searched by name or SKU) with their
 // Category and Supplier eager-loaded. Preload runs a second query and stitches
 // the results — the Go way to avoid N+1, chosen explicitly per call.
-func (r *productRepository) FindAll(search string, offset, limit int) ([]models.Product, int64, error) {
+// A positive lowStockThreshold restricts results to products at or below that
+// quantity (0 or less means no stock filter).
+func (r *productRepository) FindAll(search string, lowStockThreshold, offset, limit int) ([]models.Product, int64, error) {
 	var products []models.Product
 	var total int64
 
@@ -40,6 +42,9 @@ func (r *productRepository) FindAll(search string, offset, limit int) ([]models.
 	if search != "" {
 		like := "%" + search + "%"
 		query = query.Where("name LIKE ? OR sku LIKE ?", like, like)
+	}
+	if lowStockThreshold > 0 {
+		query = query.Where("quantity <= ?", lowStockThreshold)
 	}
 
 	if err := query.Count(&total).Error; err != nil {

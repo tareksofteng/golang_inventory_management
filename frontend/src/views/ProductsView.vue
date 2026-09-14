@@ -8,6 +8,10 @@ const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 const categoryOptions = ref([])
 const supplierOptions = ref([])
 
+// Quick "low stock only" filter, sent to the API as ?low_stock=true.
+const lowStock = ref(false)
+const extraParams = computed(() => (lowStock.value ? { low_stock: true } : {}))
+
 const stockBadge = (r) => {
   const low = r.quantity <= 10
   const cls = low
@@ -68,5 +72,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <CrudPage title="Products" endpoint="/products" :columns="columns" :fields="fields" :new-item="newItem" />
+  <CrudPage title="Products" endpoint="/products" :columns="columns" :fields="fields" :new-item="newItem" :extra-params="extraParams">
+    <template #filters>
+      <label class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40">
+        <input v-model="lowStock" type="checkbox" class="h-4 w-4 rounded text-brand-600" />
+        Low stock only
+      </label>
+    </template>
+  </CrudPage>
 </template>

@@ -115,12 +115,14 @@ func (ctrl *ProductController) Create(c *gin.Context) {
 // @Param    page      query     int     false  "Page number"
 // @Param    per_page  query     int     false  "Items per page"
 // @Param    search    query     string  false  "Search by name or SKU"
+// @Param    low_stock query     bool    false  "Only products at or below the low-stock threshold"
 // @Success  200       {object}  map[string]interface{}
 // @Router   /products [get]
 func (ctrl *ProductController) List(c *gin.Context) {
 	p := pagination.Parse(c)
+	lowStock := c.Query("low_stock") == "true" || c.Query("low_stock") == "1"
 
-	products, total, err := ctrl.service.List(p.Search, p.Page, p.PerPage)
+	products, total, err := ctrl.service.List(p.Search, lowStock, p.Page, p.PerPage)
 	if err != nil {
 		response.InternalError(c, "Failed to fetch products")
 		return

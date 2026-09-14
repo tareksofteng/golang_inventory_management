@@ -1142,6 +1142,12 @@ const docTemplate = `{
                         "description": "Search by name or SKU",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only products at or below the low-stock threshold",
+                        "name": "low_stock",
+                        "in": "query"
                     }
                 ],
                 "responses": {

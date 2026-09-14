@@ -26,6 +26,7 @@ const props = defineProps({
   columns: { type: Array, required: true }, // [{ key, label, render? }]
   fields: { type: Array, required: true }, // form fields [{ key,label,type,options?,required? }]
   newItem: { type: Function, default: () => ({}) }, // factory for a blank form
+  extraParams: { type: Object, default: () => ({}) }, // extra query params merged into every list request
 })
 
 const items = ref([])
@@ -50,12 +51,17 @@ watch(search, () => {
   }, 350)
 })
 watch(page, load)
+// A change to any external filter resets to the first page and reloads.
+watch(() => props.extraParams, () => {
+  page.value = 1
+  load()
+}, { deep: true })
 
 async function load() {
   loading.value = true
   try {
     const { data } = await api.get(props.endpoint, {
-      params: { page: page.value, per_page: 10, search: search.value },
+      params: { page: page.value, per_page: 10, search: search.value, ...props.extraParams },
     })
     items.value = data.data
     meta.value = data.meta
@@ -133,7 +139,8 @@ defineExpose({ load })
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">{{ title }}</h1>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <slot name="filters" />
         <input v-model="search" class="input w-56" placeholder="Search..." />
         <button class="btn-primary whitespace-nowrap" @click="openCreate">+ Add New</button>
       </div>
