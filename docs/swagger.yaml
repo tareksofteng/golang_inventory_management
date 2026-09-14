@@ -1131,6 +1131,10 @@ paths:
         in: query
         name: search
         type: string
+      - description: Only products at or below the low-stock threshold
+        in: query
+        name: low_stock
+        type: boolean
       produces:
       - application/json
       responses:
