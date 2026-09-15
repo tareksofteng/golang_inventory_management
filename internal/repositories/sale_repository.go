@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"time"
 
 	"inventory-api/internal/models"
 
@@ -16,7 +17,7 @@ var ErrInsufficientStock = errors.New("insufficient stock")
 type SaleRepository interface {
 	Create(sale *models.Sale) error
 	CountAll() (int64, error)
-	FindAll(search string, offset, limit int) ([]models.Sale, int64, error)
+	FindAll(search string, from, to time.Time, offset, limit int) ([]models.Sale, int64, error)
 	FindByID(id uint) (*models.Sale, error)
 	FindByInvoiceNo(invoiceNo string) (*models.Sale, error)
 	Delete(id uint) error
@@ -74,13 +75,22 @@ func (r *saleRepository) CountAll() (int64, error) {
 	return n, err
 }
 
-func (r *saleRepository) FindAll(search string, offset, limit int) ([]models.Sale, int64, error) {
+// FindAll lists sales newest-first, optionally filtered by an invoice-number
+// search and a [from, to) date window (on created_at). Zero-value from/to leave
+// that bound open.
+func (r *saleRepository) FindAll(search string, from, to time.Time, offset, limit int) ([]models.Sale, int64, error) {
 	var sales []models.Sale
 	var total int64
 
 	query := r.db.Model(&models.Sale{})
 	if search != "" {
 		query = query.Where("invoice_no LIKE ?", "%"+search+"%")
+	}
+	if !from.IsZero() {
+		query = query.Where("created_at >= ?", from)
+	}
+	if !to.IsZero() {
+		query = query.Where("created_at < ?", to)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
