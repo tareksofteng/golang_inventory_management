@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
@@ -33,7 +34,7 @@ type CreateSaleInput struct {
 
 type SaleService interface {
 	Create(input CreateSaleInput) (*models.Sale, error)
-	List(search string, page, perPage int) ([]models.Sale, int64, error)
+	List(search string, from, to time.Time, page, perPage int) ([]models.Sale, int64, error)
 	Get(id uint) (*models.Sale, error)
 	Delete(id uint) error
 }
@@ -136,9 +137,9 @@ func (s *saleService) Create(input CreateSaleInput) (*models.Sale, error) {
 	return s.repo.FindByID(sale.ID)
 }
 
-func (s *saleService) List(search string, page, perPage int) ([]models.Sale, int64, error) {
+func (s *saleService) List(search string, from, to time.Time, page, perPage int) ([]models.Sale, int64, error) {
 	offset := (page - 1) * perPage
-	return s.repo.FindAll(search, offset, perPage)
+	return s.repo.FindAll(search, from, to, offset, perPage)
 }
 
 func (s *saleService) Get(id uint) (*models.Sale, error) {
