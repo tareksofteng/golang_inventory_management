@@ -35,3 +35,28 @@ jobs:
 
       - name: Test
         run: go test ./... -count=1
+
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` installs exactly what package-lock.json pins — reproducible and
+      # faster than `npm install`, and it fails if the lockfile is out of sync.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
