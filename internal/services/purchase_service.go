@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
@@ -36,7 +37,7 @@ type CreatePurchaseInput struct {
 
 type PurchaseService interface {
 	Create(input CreatePurchaseInput) (*models.Purchase, error)
-	List(search string, page, perPage int) ([]models.Purchase, int64, error)
+	List(search string, from, to time.Time, page, perPage int) ([]models.Purchase, int64, error)
 	Get(id uint) (*models.Purchase, error)
 	Delete(id uint) error
 }
@@ -132,9 +133,9 @@ func (s *purchaseService) Create(input CreatePurchaseInput) (*models.Purchase, e
 	return s.repo.FindByID(purchase.ID)
 }
 
-func (s *purchaseService) List(search string, page, perPage int) ([]models.Purchase, int64, error) {
+func (s *purchaseService) List(search string, from, to time.Time, page, perPage int) ([]models.Purchase, int64, error) {
 	offset := (page - 1) * perPage
-	return s.repo.FindAll(search, offset, perPage)
+	return s.repo.FindAll(search, from, to, offset, perPage)
 }
 
 func (s *purchaseService) Get(id uint) (*models.Purchase, error) {

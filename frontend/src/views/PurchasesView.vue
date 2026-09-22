@@ -11,6 +11,8 @@ const purchases = ref([])
 const meta = ref({ page: 1, total: 0, total_pages: 1 })
 const page = ref(1)
 const loading = ref(false)
+const from = ref('')
+const to = ref('')
 
 const suppliers = ref([])
 const products = ref([])
@@ -34,12 +36,21 @@ const due = computed(() => grandTotal.value - (Number(form.paid_amount) || 0))
 async function load() {
   loading.value = true
   try {
-    const { data } = await api.get('/purchases', { params: { page: page.value, per_page: 10 } })
+    const params = { page: page.value, per_page: 10 }
+    if (from.value) params.from = from.value
+    if (to.value) params.to = to.value
+    const { data } = await api.get('/purchases', { params })
     purchases.value = data.data
     meta.value = data.meta
   } finally {
     loading.value = false
   }
+}
+
+// A date-filter change resets to the first page before reloading.
+function applyFilters() {
+  page.value = 1
+  load()
 }
 
 function openCreate() {
@@ -113,9 +124,17 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-2xl font-bold">Purchases</h1>
-      <button class="btn-primary" @click="openCreate">+ New Purchase</button>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1 text-sm text-slate-400">
+          <input v-model="from" type="date" class="input" title="From date" @change="applyFilters" />
+          <span>–</span>
+          <input v-model="to" type="date" class="input" title="To date" @change="applyFilters" />
+        </div>
+        <button v-if="from || to" class="btn-ghost whitespace-nowrap" @click="from = ''; to = ''; applyFilters()">Clear</button>
+        <button class="btn-primary whitespace-nowrap" @click="openCreate">+ New Purchase</button>
+      </div>
     </div>
 
     <div class="card overflow-hidden">
@@ -131,7 +150,7 @@ onMounted(async () => {
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
             <tr v-if="loading"><td colspan="7" class="px-4 py-10 text-center text-slate-400">Loading…</td></tr>
-            <tr v-else-if="!purchases.length"><td colspan="7" class="px-4 py-10 text-center text-slate-400">No purchases yet</td></tr>
+            <tr v-else-if="!purchases.length"><td colspan="7" class="px-4 py-10 text-center text-slate-400">{{ (from || to) ? 'No purchases in this date range' : 'No purchases yet' }}</td></tr>
             <tr v-for="p in purchases" :key="p.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/30">
               <td class="px-4 py-3 font-medium">{{ p.invoice_no }}</td>
               <td class="px-4 py-3">{{ p.supplier?.name }}</td>

@@ -1260,6 +1260,14 @@ paths:
         in: query
         name: search
         type: string
+      - description: Start date (YYYY-MM-DD, inclusive)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD, inclusive)
+        in: query
+        name: to
+        type: string
       produces:
       - application/json
       responses:
