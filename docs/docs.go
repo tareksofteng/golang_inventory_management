@@ -1347,6 +1347,18 @@ const docTemplate = `{
                         "description": "Search by invoice no",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD, inclusive)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD, inclusive)",
+                        "name": "to",
+                        "in": "query"
                     }
                 ],
                 "responses": {

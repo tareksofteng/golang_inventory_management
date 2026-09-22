@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"time"
+
 	"inventory-api/internal/models"
 
 	"gorm.io/gorm"
@@ -10,7 +12,7 @@ type PurchaseRepository interface {
 	// Create runs the WHOLE purchase as one DB transaction.
 	Create(purchase *models.Purchase) error
 	CountAll() (int64, error)
-	FindAll(search string, offset, limit int) ([]models.Purchase, int64, error)
+	FindAll(search string, from, to time.Time, offset, limit int) ([]models.Purchase, int64, error)
 	FindByID(id uint) (*models.Purchase, error)
 	FindByInvoiceNo(invoiceNo string) (*models.Purchase, error)
 	Delete(id uint) error
@@ -73,13 +75,22 @@ func (r *purchaseRepository) CountAll() (int64, error) {
 	return n, err
 }
 
-func (r *purchaseRepository) FindAll(search string, offset, limit int) ([]models.Purchase, int64, error) {
+// FindAll lists purchases newest-first, optionally filtered by an invoice-number
+// search and a [from, to) date window (on created_at). Zero-value from/to leave
+// that bound open.
+func (r *purchaseRepository) FindAll(search string, from, to time.Time, offset, limit int) ([]models.Purchase, int64, error) {
 	var purchases []models.Purchase
 	var total int64
 
 	query := r.db.Model(&models.Purchase{})
 	if search != "" {
 		query = query.Where("invoice_no LIKE ?", "%"+search+"%")
+	}
+	if !from.IsZero() {
+		query = query.Where("created_at >= ?", from)
+	}
+	if !to.IsZero() {
+		query = query.Where("created_at < ?", to)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
