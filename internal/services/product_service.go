@@ -20,6 +20,7 @@ var (
 type ProductService interface {
 	Create(product *models.Product) (*models.Product, error)
 	List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error)
+	Export(search string, lowStockOnly bool) ([]models.Product, error)
 	Get(id uint) (*models.Product, error)
 	Update(id uint, data *models.Product) (*models.Product, error)
 	Delete(id uint) error
@@ -90,11 +91,23 @@ const LowStockThreshold = 10
 
 func (s *productService) List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error) {
 	offset := (page - 1) * perPage
-	threshold := 0
+	return s.repo.FindAll(search, lowStockFilter(lowStockOnly), offset, perPage)
+}
+
+// Export returns every matching product (no pagination) for a CSV download,
+// honouring the same search and low-stock filters as the list.
+func (s *productService) Export(search string, lowStockOnly bool) ([]models.Product, error) {
+	products, _, err := s.repo.FindAll(search, lowStockFilter(lowStockOnly), 0, -1)
+	return products, err
+}
+
+// lowStockFilter maps the "low stock only" flag onto the repository's threshold
+// argument (0 means no stock filter).
+func lowStockFilter(lowStockOnly bool) int {
 	if lowStockOnly {
-		threshold = LowStockThreshold
+		return LowStockThreshold
 	}
-	return s.repo.FindAll(search, threshold, offset, perPage)
+	return 0
 }
 
 func (s *productService) Get(id uint) (*models.Product, error) {

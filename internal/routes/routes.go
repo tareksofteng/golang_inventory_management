@@ -228,6 +228,7 @@ func registerProductRoutes(rg *gin.RouterGroup, ctrl *controllers.ProductControl
 	{
 		g.POST("", ctrl.Create)
 		g.GET("", ctrl.List)
+		g.GET("/export", ctrl.Export)
 		g.GET("/:id", ctrl.Get)
 		g.PUT("/:id", ctrl.Update)
 		g.DELETE("/:id", ctrl.Delete)
