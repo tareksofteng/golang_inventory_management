@@ -72,7 +72,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <CrudPage title="Products" endpoint="/products" :columns="columns" :fields="fields" :new-item="newItem" :extra-params="extraParams">
+  <CrudPage title="Products" endpoint="/products" export-endpoint="/products/export" :columns="columns" :fields="fields" :new-item="newItem" :extra-params="extraParams">
     <template #filters>
       <label class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40">
         <input v-model="lowStock" type="checkbox" class="h-4 w-4 rounded text-brand-600" />

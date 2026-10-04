@@ -27,6 +27,7 @@ const props = defineProps({
   fields: { type: Array, required: true }, // form fields [{ key,label,type,options?,required? }]
   newItem: { type: Function, default: () => ({}) }, // factory for a blank form
   extraParams: { type: Object, default: () => ({}) }, // extra query params merged into every list request
+  exportEndpoint: { type: String, default: '' }, // when set, shows an "Export CSV" button hitting this endpoint
 })
 
 const items = ref([])
@@ -67,6 +68,27 @@ async function load() {
     meta.value = data.meta
   } finally {
     loading.value = false
+  }
+}
+
+// Download the current (search + filter) result set as CSV. Fetched as a blob
+// through the api instance so the auth token is attached automatically.
+const exporting = ref(false)
+async function exportCsv() {
+  if (!props.exportEndpoint) return
+  exporting.value = true
+  try {
+    const params = { ...props.extraParams }
+    if (search.value.trim()) params.search = search.value.trim()
+    const { data } = await api.get(props.exportEndpoint, { params, responseType: 'blob' })
+    const url = URL.createObjectURL(data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${props.title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -142,6 +164,14 @@ defineExpose({ load })
       <div class="flex flex-wrap items-center gap-2">
         <slot name="filters" />
         <input v-model="search" class="input w-56" placeholder="Search..." />
+        <button
+          v-if="exportEndpoint"
+          class="btn-ghost whitespace-nowrap"
+          :disabled="exporting || !items.length"
+          @click="exportCsv"
+        >
+          {{ exporting ? 'Exporting…' : 'Export CSV' }}
+        </button>
         <button class="btn-primary whitespace-nowrap" @click="openCreate">+ Add New</button>
       </div>
     </div>
