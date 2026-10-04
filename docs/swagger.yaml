@@ -1245,6 +1245,29 @@ paths:
       summary: Update a product
       tags:
       - Products
+  /products/export:
+    get:
+      parameters:
+      - description: Search by name or SKU
+        in: query
+        name: search
+        type: string
+      - description: Only products at or below the low-stock threshold
+        in: query
+        name: low_stock
+        type: boolean
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Export products as CSV (honours the search and low-stock filters)
+      tags:
+      - Products
   /purchases:
     get:
       parameters:

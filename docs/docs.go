@@ -1198,6 +1198,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/products/export": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/csv"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Export products as CSV (honours the search and low-stock filters)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search by name or SKU",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only products at or below the low-stock threshold",
+                        "name": "low_stock",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
         "/products/{id}": {
             "get": {
                 "security": [

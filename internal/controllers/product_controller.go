@@ -1,8 +1,12 @@
 package controllers
 
 import (
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"inventory-api/internal/models"
 	"inventory-api/internal/services"
@@ -135,6 +139,61 @@ func (ctrl *ProductController) List(c *gin.Context) {
 		TotalPages: pagination.TotalPages(total, p.PerPage),
 	}
 	response.Paginated(c, "Products fetched successfully", products, meta)
+}
+
+// Export godoc
+// @Summary  Export products as CSV (honours the search and low-stock filters)
+// @Tags     Products
+// @Produce  text/csv
+// @Security BearerAuth
+// @Param    search    query  string  false  "Search by name or SKU"
+// @Param    low_stock query  bool    false  "Only products at or below the low-stock threshold"
+// @Success  200       {file}  file
+// @Router   /products/export [get]
+func (ctrl *ProductController) Export(c *gin.Context) {
+	lowStock := c.Query("low_stock") == "true" || c.Query("low_stock") == "1"
+
+	products, err := ctrl.service.Export(c.Query("search"), lowStock)
+	if err != nil {
+		response.InternalError(c, "Failed to export products")
+		return
+	}
+
+	filename := fmt.Sprintf("products-%s.csv", time.Now().Format("2006-01-02"))
+	c.Header("Content-Disposition", "attachment; filename="+filename)
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+
+	status := func(active bool) string {
+		if active {
+			return "Active"
+		}
+		return "Inactive"
+	}
+
+	w := csv.NewWriter(c.Writer)
+	defer w.Flush()
+
+	_ = w.Write([]string{"SKU", "Name", "Category", "Supplier", "Price", "Cost", "Quantity", "Unit", "Status"})
+	for _, p := range products {
+		var category, supplier string
+		if p.Category != nil {
+			category = p.Category.Name
+		}
+		if p.Supplier != nil {
+			supplier = p.Supplier.Name
+		}
+		_ = w.Write([]string{
+			p.SKU,
+			p.Name,
+			category,
+			supplier,
+			strconv.FormatFloat(p.Price, 'f', 2, 64),
+			strconv.FormatFloat(p.CostPrice, 'f', 2, 64),
+			strconv.Itoa(p.Quantity),
+			p.Unit,
+			status(p.IsActive),
+		})
+	}
 }
 
 // Get godoc
