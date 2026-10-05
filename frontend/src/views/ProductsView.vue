@@ -20,6 +20,22 @@ const stockBadge = (r) => {
   return `<span class="badge ${cls}">${r.quantity} ${r.unit || ''}</span>`
 }
 
+// Gross margin on the selling price: (price - cost) / price. Green = healthy,
+// amber = thin (<15%), red = selling at or below cost (a loss).
+const marginBadge = (r) => {
+  const price = Number(r.price) || 0
+  const cost = Number(r.cost_price) || 0
+  if (price <= 0) return '<span class="text-slate-400">—</span>'
+  const pct = ((price - cost) / price) * 100
+  const cls =
+    pct <= 0
+      ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
+      : pct < 15
+        ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+  return `<span class="badge ${cls}">${pct.toFixed(1)}%</span>`
+}
+
 const imgCell = (r) =>
   r.image
     ? `<img src="${assetUrl(r.image)}" class="h-10 w-10 rounded-lg object-cover border border-slate-200" />`
@@ -31,6 +47,7 @@ const columns = [
   { key: 'sku', label: 'SKU' },
   { key: 'category', label: 'Category', render: (r) => r.category?.name || '—' },
   { key: 'price', label: 'Price', render: (r) => money(r.price) },
+  { key: 'margin', label: 'Margin', render: marginBadge },
   { key: 'quantity', label: 'Stock', render: stockBadge },
 ]
 
