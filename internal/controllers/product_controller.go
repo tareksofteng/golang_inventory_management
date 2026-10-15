@@ -21,28 +21,30 @@ import (
 // only moves via the Stock In module.
 
 type CreateProductRequest struct {
-	Name       string  `json:"name" binding:"required,min=2,max=150"`
-	SKU        string  `json:"sku" binding:"required,max=50"`
-	Image      string  `json:"image" binding:"max=255"`
-	CategoryID uint    `json:"category_id" binding:"required"`
-	SupplierID uint    `json:"supplier_id" binding:"required"`
-	Price      float64 `json:"price" binding:"gte=0"`
-	CostPrice  float64 `json:"cost_price" binding:"gte=0"`
-	Quantity   int     `json:"quantity" binding:"gte=0"`
-	Unit       string  `json:"unit" binding:"max=20"`
-	IsActive   *bool   `json:"is_active"`
+	Name         string  `json:"name" binding:"required,min=2,max=150"`
+	SKU          string  `json:"sku" binding:"required,max=50"`
+	Image        string  `json:"image" binding:"max=255"`
+	CategoryID   uint    `json:"category_id" binding:"required"`
+	SupplierID   uint    `json:"supplier_id" binding:"required"`
+	Price        float64 `json:"price" binding:"gte=0"`
+	CostPrice    float64 `json:"cost_price" binding:"gte=0"`
+	Quantity     int     `json:"quantity" binding:"gte=0"`
+	Unit         string  `json:"unit" binding:"max=20"`
+	IsActive     *bool   `json:"is_active"`
+	ReorderLevel *int    `json:"reorder_level" binding:"omitempty,gte=0"`
 }
 
 type UpdateProductRequest struct {
-	Name       string  `json:"name" binding:"required,min=2,max=150"`
-	SKU        string  `json:"sku" binding:"required,max=50"`
-	Image      string  `json:"image" binding:"max=255"`
-	CategoryID uint    `json:"category_id" binding:"required"`
-	SupplierID uint    `json:"supplier_id" binding:"required"`
-	Price      float64 `json:"price" binding:"gte=0"`
-	CostPrice  float64 `json:"cost_price" binding:"gte=0"`
-	Unit       string  `json:"unit" binding:"max=20"`
-	IsActive   *bool   `json:"is_active"`
+	Name         string  `json:"name" binding:"required,min=2,max=150"`
+	SKU          string  `json:"sku" binding:"required,max=50"`
+	Image        string  `json:"image" binding:"max=255"`
+	CategoryID   uint    `json:"category_id" binding:"required"`
+	SupplierID   uint    `json:"supplier_id" binding:"required"`
+	Price        float64 `json:"price" binding:"gte=0"`
+	CostPrice    float64 `json:"cost_price" binding:"gte=0"`
+	Unit         string  `json:"unit" binding:"max=20"`
+	IsActive     *bool   `json:"is_active"`
+	ReorderLevel *int    `json:"reorder_level" binding:"omitempty,gte=0"`
 }
 
 // ---- Controller ------------------------------------------------------------
@@ -88,19 +90,23 @@ func (ctrl *ProductController) Create(c *gin.Context) {
 	}
 
 	product := &models.Product{
-		Name:       req.Name,
-		SKU:        req.SKU,
-		Image:      req.Image,
-		CategoryID: req.CategoryID,
-		SupplierID: req.SupplierID,
-		Price:      req.Price,
-		CostPrice:  req.CostPrice,
-		Quantity:   req.Quantity,
-		Unit:       req.Unit,
-		IsActive:   true,
+		Name:         req.Name,
+		SKU:          req.SKU,
+		Image:        req.Image,
+		CategoryID:   req.CategoryID,
+		SupplierID:   req.SupplierID,
+		Price:        req.Price,
+		CostPrice:    req.CostPrice,
+		Quantity:     req.Quantity,
+		Unit:         req.Unit,
+		IsActive:     true,
+		ReorderLevel: 10,
 	}
 	if req.IsActive != nil {
 		product.IsActive = *req.IsActive
+	}
+	if req.ReorderLevel != nil {
+		product.ReorderLevel = *req.ReorderLevel
 	}
 
 	created, err := ctrl.service.Create(product)
@@ -173,7 +179,7 @@ func (ctrl *ProductController) Export(c *gin.Context) {
 	w := csv.NewWriter(c.Writer)
 	defer w.Flush()
 
-	_ = w.Write([]string{"SKU", "Name", "Category", "Supplier", "Price", "Cost", "Quantity", "Unit", "Status"})
+	_ = w.Write([]string{"SKU", "Name", "Category", "Supplier", "Price", "Cost", "Quantity", "Reorder", "Unit", "Status"})
 	for _, p := range products {
 		var category, supplier string
 		if p.Category != nil {
@@ -190,6 +196,7 @@ func (ctrl *ProductController) Export(c *gin.Context) {
 			strconv.FormatFloat(p.Price, 'f', 2, 64),
 			strconv.FormatFloat(p.CostPrice, 'f', 2, 64),
 			strconv.Itoa(p.Quantity),
+			strconv.Itoa(p.ReorderLevel),
 			p.Unit,
 			status(p.IsActive),
 		})
@@ -248,18 +255,22 @@ func (ctrl *ProductController) Update(c *gin.Context) {
 	}
 
 	data := &models.Product{
-		Name:       req.Name,
-		SKU:        req.SKU,
-		Image:      req.Image,
-		CategoryID: req.CategoryID,
-		SupplierID: req.SupplierID,
-		Price:      req.Price,
-		CostPrice:  req.CostPrice,
-		Unit:       req.Unit,
-		IsActive:   true,
+		Name:         req.Name,
+		SKU:          req.SKU,
+		Image:        req.Image,
+		CategoryID:   req.CategoryID,
+		SupplierID:   req.SupplierID,
+		Price:        req.Price,
+		CostPrice:    req.CostPrice,
+		Unit:         req.Unit,
+		IsActive:     true,
+		ReorderLevel: 10,
 	}
 	if req.IsActive != nil {
 		data.IsActive = *req.IsActive
+	}
+	if req.ReorderLevel != nil {
+		data.ReorderLevel = *req.ReorderLevel
 	}
 
 	updated, err := ctrl.service.Update(id, data)

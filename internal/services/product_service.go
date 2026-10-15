@@ -85,29 +85,16 @@ func (s *productService) Create(product *models.Product) (*models.Product, error
 	return s.repo.FindByID(product.ID)
 }
 
-// LowStockThreshold: products with quantity at or below this are "low stock".
-// Kept in sync with the dashboard's threshold and the Products table badge.
-const LowStockThreshold = 10
-
 func (s *productService) List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error) {
 	offset := (page - 1) * perPage
-	return s.repo.FindAll(search, lowStockFilter(lowStockOnly), offset, perPage)
+	return s.repo.FindAll(search, lowStockOnly, offset, perPage)
 }
 
 // Export returns every matching product (no pagination) for a CSV download,
 // honouring the same search and low-stock filters as the list.
 func (s *productService) Export(search string, lowStockOnly bool) ([]models.Product, error) {
-	products, _, err := s.repo.FindAll(search, lowStockFilter(lowStockOnly), 0, -1)
+	products, _, err := s.repo.FindAll(search, lowStockOnly, 0, -1)
 	return products, err
-}
-
-// lowStockFilter maps the "low stock only" flag onto the repository's threshold
-// argument (0 means no stock filter).
-func lowStockFilter(lowStockOnly bool) int {
-	if lowStockOnly {
-		return LowStockThreshold
-	}
-	return 0
 }
 
 func (s *productService) Get(id uint) (*models.Product, error) {
@@ -154,6 +141,7 @@ func (s *productService) Update(id uint, data *models.Product) (*models.Product,
 	existing.CostPrice = data.CostPrice
 	existing.Unit = data.Unit
 	existing.IsActive = data.IsActive
+	existing.ReorderLevel = data.ReorderLevel
 	// Quantity intentionally NOT updated here.
 
 	if err := s.repo.Update(existing); err != nil {

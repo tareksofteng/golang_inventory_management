@@ -2387,6 +2387,10 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
+                "reorder_level": {
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "sku": {
                     "type": "string",
                     "maxLength": 50
@@ -2817,6 +2821,10 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "minimum": 0
+                },
+                "reorder_level": {
+                    "type": "integer",
                     "minimum": 0
                 },
                 "sku": {

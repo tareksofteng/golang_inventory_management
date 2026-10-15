@@ -102,6 +102,9 @@ definitions:
       quantity:
         minimum: 0
         type: integer
+      reorder_level:
+        minimum: 0
+        type: integer
       sku:
         maxLength: 50
         type: string
@@ -409,6 +412,9 @@ definitions:
       price:
         minimum: 0
         type: number
+      reorder_level:
+        minimum: 0
+        type: integer
       sku:
         maxLength: 50
         type: string
