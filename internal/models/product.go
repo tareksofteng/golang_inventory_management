@@ -30,6 +30,11 @@ type Product struct {
 	Unit     string `gorm:"type:varchar(20)" json:"unit"`       // pcs, kg, litre...
 	IsActive bool   `gorm:"not null" json:"is_active"`          // defaulted in controller, not via GORM (false zero-value gotcha)
 
+	// ReorderLevel is this product's own low-stock threshold: it is "low" when
+	// Quantity <= ReorderLevel. The DB default (10) backfills existing rows on
+	// migration; new rows are defaulted in the controller.
+	ReorderLevel int `gorm:"not null;default:10" json:"reorder_level"`
+
 	// Associations. Pointers + omitempty so they vanish from the JSON when not
 	// preloaded, instead of showing an empty {} object.
 	Category *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`

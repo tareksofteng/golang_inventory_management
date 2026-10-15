@@ -32,7 +32,7 @@ type DayTotal struct {
 type DashboardRepository interface {
 	Count(model interface{}) (int64, error)
 	TotalStockValue() (float64, error)
-	LowStockProducts(threshold, limit int) ([]models.Product, int64, error)
+	LowStockProducts(limit int) ([]models.Product, int64, error)
 	ProductsByCategory() ([]CategoryCount, error)
 
 	// Sales / purchase money sums. A nil `from` means "all time".
@@ -70,12 +70,12 @@ func (r *dashboardRepository) TotalStockValue() (float64, error) {
 	return value, err
 }
 
-func (r *dashboardRepository) LowStockProducts(threshold, limit int) ([]models.Product, int64, error) {
+func (r *dashboardRepository) LowStockProducts(limit int) ([]models.Product, int64, error) {
 	var products []models.Product
 	var total int64
 
 	base := r.db.Model(&models.Product{}).
-		Where("is_active = ? AND quantity <= ?", true, threshold)
+		Where("is_active = ? AND quantity <= reorder_level", true)
 
 	if err := base.Count(&total).Error; err != nil {
 		return nil, 0, err

@@ -7,9 +7,6 @@ import (
 	"inventory-api/internal/repositories"
 )
 
-// lowStockThreshold: products with quantity at or below this are "low stock".
-const lowStockThreshold = 10
-
 // DashboardSummary is the full payload the dashboard screen needs in ONE call.
 type DashboardSummary struct {
 	Totals             Totals                       `json:"totals"`
@@ -103,7 +100,7 @@ func (s *dashboardService) Summary() (*DashboardSummary, error) {
 	if out.StockValue, err = s.repo.TotalStockValue(); err != nil {
 		return nil, err
 	}
-	if out.LowStockProducts, out.LowStockCount, err = s.repo.LowStockProducts(lowStockThreshold, 10); err != nil {
+	if out.LowStockProducts, out.LowStockCount, err = s.repo.LowStockProducts(10); err != nil {
 		return nil, err
 	}
 	if out.ProductsByCategory, err = s.repo.ProductsByCategory(); err != nil {
