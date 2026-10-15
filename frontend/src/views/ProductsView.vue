@@ -13,11 +13,14 @@ const lowStock = ref(false)
 const extraParams = computed(() => (lowStock.value ? { low_stock: true } : {}))
 
 const stockBadge = (r) => {
-  const low = r.quantity <= 10
+  // "Low" is measured against each product's own reorder level (default 10).
+  const reorder = r.reorder_level ?? 10
+  const low = r.quantity <= reorder
   const cls = low
     ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
     : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-  return `<span class="badge ${cls}">${r.quantity} ${r.unit || ''}</span>`
+  const title = low ? ` title="At or below reorder level (${reorder})"` : ''
+  return `<span class="badge ${cls}"${title}>${r.quantity} ${r.unit || ''}</span>`
 }
 
 // Gross margin on the selling price: (price - cost) / price. Green = healthy,
@@ -61,6 +64,7 @@ const fields = computed(() => [
   { key: 'price', label: 'Selling Price', type: 'number' },
   { key: 'cost_price', label: 'Cost Price', type: 'number' },
   { key: 'quantity', label: 'Opening Quantity', type: 'number' },
+  { key: 'reorder_level', label: 'Reorder Level (low-stock alert)', type: 'number' },
   { key: 'unit', label: 'Unit (pcs, kg...)', type: 'text' },
   { key: 'is_active', label: 'Status', type: 'checkbox' },
 ])
@@ -74,6 +78,7 @@ const newItem = () => ({
   price: 0,
   cost_price: 0,
   quantity: 0,
+  reorder_level: 10,
   unit: 'pcs',
   is_active: true,
 })
