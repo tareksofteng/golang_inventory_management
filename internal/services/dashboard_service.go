@@ -33,6 +33,9 @@ type Finance struct {
 	TodaySales    float64 `json:"today_sales"`
 	TodayPurchase float64 `json:"today_purchase"`
 	MonthSales    float64 `json:"month_sales"`
+	TotalProfit   float64 `json:"total_profit"` // gross profit all time (net revenue - COGS)
+	TodayProfit   float64 `json:"today_profit"`
+	MonthProfit   float64 `json:"month_profit"`
 	Receivable    float64 `json:"receivable"` // total customer due (money owed TO us)
 	Payable       float64 `json:"payable"`    // total supplier due (money WE owe)
 }
@@ -87,6 +90,15 @@ func (s *dashboardService) Summary() (*DashboardSummary, error) {
 		return nil, err
 	}
 	if out.Finance.MonthSales, err = s.repo.SalesSum(&monthStart); err != nil {
+		return nil, err
+	}
+	if out.Finance.TotalProfit, err = s.repo.GrossProfit(nil); err != nil {
+		return nil, err
+	}
+	if out.Finance.TodayProfit, err = s.repo.GrossProfit(&todayStart); err != nil {
+		return nil, err
+	}
+	if out.Finance.MonthProfit, err = s.repo.GrossProfit(&monthStart); err != nil {
 		return nil, err
 	}
 	if out.Finance.Receivable, err = s.repo.CustomerDueTotal(); err != nil {
