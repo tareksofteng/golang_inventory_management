@@ -39,6 +39,9 @@ type DashboardRepository interface {
 	SalesSum(from *time.Time) (float64, error)
 	PurchaseSum(from *time.Time) (float64, error)
 
+	// GrossProfit = net sales revenue minus cost of goods sold.
+	GrossProfit(from *time.Time) (float64, error)
+
 	// Outstanding balances.
 	CustomerDueTotal() (float64, error)
 	SupplierDueTotal() (float64, error)
@@ -118,6 +121,34 @@ func (r *dashboardRepository) sumAmount(model interface{}, from *time.Time) (flo
 	}
 	err := q.Scan(&value).Error
 	return value, err
+}
+
+// GrossProfit computes net revenue (subtotal - discount, excluding tax) minus
+// cost of goods sold (unit_cost * quantity) for sales created on/after `from`
+// (nil = all time). Revenue and COGS are summed separately so the sale_items
+// JOIN never multiplies the revenue rows.
+func (r *dashboardRepository) GrossProfit(from *time.Time) (float64, error) {
+	var revenue float64
+	rq := r.db.Model(&models.Sale{}).Select("COALESCE(SUM(subtotal - discount), 0)")
+	if from != nil {
+		rq = rq.Where("created_at >= ?", *from)
+	}
+	if err := rq.Scan(&revenue).Error; err != nil {
+		return 0, err
+	}
+
+	var cogs float64
+	cq := r.db.Table("sale_items").
+		Select("COALESCE(SUM(sale_items.unit_cost * sale_items.quantity), 0)").
+		Joins("JOIN sales ON sales.id = sale_items.sale_id").
+		Where("sale_items.deleted_at IS NULL AND sales.deleted_at IS NULL")
+	if from != nil {
+		cq = cq.Where("sales.created_at >= ?", *from)
+	}
+	if err := cq.Scan(&cogs).Error; err != nil {
+		return 0, err
+	}
+	return revenue - cogs, nil
 }
 
 func (r *dashboardRepository) CustomerDueTotal() (float64, error) {
