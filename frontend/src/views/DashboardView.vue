@@ -53,6 +53,22 @@ onMounted(async () => {
       <KpiCard label="Payable" :value="money(data.finance.payable)" icon="outbound" tone="red" hint="Due to suppliers" to="/reports/supplier-due" />
     </div>
 
+    <!-- Gross profit (net sales revenue − cost of goods sold) -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <KpiCard
+        label="Today's profit" :value="money(data.finance.today_profit)" icon="trending"
+        :tone="data.finance.today_profit < 0 ? 'red' : 'emerald'" hint="Revenue − cost of goods"
+      />
+      <KpiCard
+        label="This month's profit" :value="money(data.finance.month_profit)" icon="trending"
+        :tone="data.finance.month_profit < 0 ? 'red' : 'emerald'"
+      />
+      <KpiCard
+        label="Total profit" :value="money(data.finance.total_profit)" icon="wallet"
+        :tone="data.finance.total_profit < 0 ? 'red' : 'emerald'" hint="All-time gross profit"
+      />
+    </div>
+
     <!-- Secondary metrics — deliberately lighter than the row above -->
     <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <KpiCard compact label="Today's sales" :value="money(data.finance.today_sales)" icon="calendar" tone="slate" />
