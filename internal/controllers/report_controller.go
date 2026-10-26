@@ -60,6 +60,25 @@ func (ctrl *ReportController) Sales(c *gin.Context) {
 	response.Success(c, "Sales report", report)
 }
 
+// ProductProfit godoc
+// @Summary  Product profitability report for a date range (revenue, COGS, profit per product)
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Param    from  query     string  false  "From date (YYYY-MM-DD)"
+// @Param    to    query     string  false  "To date (YYYY-MM-DD)"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /reports/product-profit [get]
+func (ctrl *ReportController) ProductProfit(c *gin.Context) {
+	from, to := parseDateRange(c)
+	report, err := ctrl.service.ProductProfit(from, to)
+	if err != nil {
+		response.InternalError(c, "Failed to build product profit report")
+		return
+	}
+	response.Success(c, "Product profit report", report)
+}
+
 // Purchases godoc
 // @Summary  Purchase report for a date range
 // @Tags     Reports

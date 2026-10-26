@@ -40,12 +40,37 @@ type StockReport struct {
 	Items      []models.Product `json:"items"`
 }
 
+// ProductProfitItem is one row of the product profitability report.
+type ProductProfitItem struct {
+	ProductID    uint    `json:"product_id"`
+	Name         string  `json:"name"`
+	QuantitySold int64   `json:"quantity_sold"`
+	Revenue      float64 `json:"revenue"`
+	Cogs         float64 `json:"cogs"`
+	Profit       float64 `json:"profit"`
+	Margin       float64 `json:"margin"` // profit as a percentage of revenue
+}
+
+type ProductProfitSummary struct {
+	Revenue float64 `json:"revenue"`
+	Cogs    float64 `json:"cogs"`
+	Profit  float64 `json:"profit"`
+}
+
+type ProductProfitReport struct {
+	From    string               `json:"from"`
+	To      string               `json:"to"`
+	Summary ProductProfitSummary `json:"summary"`
+	Items   []ProductProfitItem  `json:"items"`
+}
+
 type ReportService interface {
 	Sales(from, to time.Time) (*SalesReport, error)
 	Purchases(from, to time.Time) (*PurchaseReport, error)
 	CustomerDue() (*DueReport, error)
 	SupplierDue() (*DueReport, error)
 	Stock(categoryID uint) (*StockReport, error)
+	ProductProfit(from, to time.Time) (*ProductProfitReport, error)
 }
 
 type reportService struct {
@@ -70,6 +95,37 @@ func (s *reportService) Sales(from, to time.Time) (*SalesReport, error) {
 		sum.Due += it.Due
 	}
 	return &SalesReport{From: from.Format(dateLayout), To: to.AddDate(0, 0, -1).Format(dateLayout), Summary: sum, Items: items}, nil
+}
+
+func (s *reportService) ProductProfit(from, to time.Time) (*ProductProfitReport, error) {
+	rows, err := s.repo.ProductProfit(from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	var sum ProductProfitSummary
+	items := make([]ProductProfitItem, 0, len(rows))
+	for _, r := range rows {
+		profit := r.Revenue - r.Cogs
+		var margin float64
+		if r.Revenue > 0 {
+			margin = profit / r.Revenue * 100
+		}
+		items = append(items, ProductProfitItem{
+			ProductID: r.ProductID, Name: r.Name, QuantitySold: r.QuantitySold,
+			Revenue: r.Revenue, Cogs: r.Cogs, Profit: profit, Margin: margin,
+		})
+		sum.Revenue += r.Revenue
+		sum.Cogs += r.Cogs
+		sum.Profit += profit
+	}
+
+	return &ProductProfitReport{
+		From:    from.Format(dateLayout),
+		To:      to.AddDate(0, 0, -1).Format(dateLayout),
+		Summary: sum,
+		Items:   items,
+	}, nil
 }
 
 func (s *reportService) Purchases(from, to time.Time) (*PurchaseReport, error) {
