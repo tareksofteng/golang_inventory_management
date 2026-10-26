@@ -11,6 +11,7 @@ const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 const REPORTS = {
   sales: { label: 'Sales Report', endpoint: '/reports/sales', ranged: true },
   purchases: { label: 'Purchase Report', endpoint: '/reports/purchases', ranged: true },
+  'product-profit': { label: 'Product Profit Report', endpoint: '/reports/product-profit', ranged: true },
   'customer-due': { label: 'Customer Due Report', endpoint: '/reports/customer-due', ranged: false },
   'supplier-due': { label: 'Supplier Due Report', endpoint: '/reports/supplier-due', ranged: false },
   stock: { label: 'Current Stock Report', endpoint: '/reports/stock', ranged: false },
@@ -64,6 +65,12 @@ function buildCsv() {
       r.total_amount, r.paid_amount, r.due,
     ])
     return { headers: ['Invoice', party, 'Date', 'Total', 'Paid', 'Due'], rows }
+  }
+  if (type.value === 'product-profit') {
+    return {
+      headers: ['Product', 'Units Sold', 'Revenue', 'COGS', 'Profit', 'Margin %'],
+      rows: d.items.map((r) => [r.name, r.quantity_sold, r.revenue, r.cogs, r.profit, r.margin.toFixed(1)]),
+    }
   }
   if (type.value === 'customer-due' || type.value === 'supplier-due') {
     const list = d.customers || d.suppliers || []
@@ -138,12 +145,19 @@ onMounted(async () => {
     <div v-if="loading" class="py-16 text-center text-slate-400">Loading…</div>
 
     <div v-else-if="data" class="space-y-4">
-      <!-- Summary for ranged reports -->
-      <div v-if="active.ranged" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <!-- Summary for sales / purchase reports -->
+      <div v-if="active.ranged && type !== 'product-profit'" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div class="card p-4"><div class="text-sm text-slate-500">Invoices</div><div class="text-xl font-bold">{{ data.summary.count }}</div></div>
         <div class="card p-4"><div class="text-sm text-slate-500">Total</div><div class="text-xl font-bold">{{ money(data.summary.total) }}</div></div>
         <div class="card p-4"><div class="text-sm text-slate-500">Paid</div><div class="text-xl font-bold text-emerald-600">{{ money(data.summary.paid) }}</div></div>
         <div class="card p-4"><div class="text-sm text-slate-500">Due</div><div class="text-xl font-bold text-amber-600">{{ money(data.summary.due) }}</div></div>
+      </div>
+
+      <!-- Summary for the product profit report -->
+      <div v-if="type === 'product-profit'" class="grid grid-cols-3 gap-4">
+        <div class="card p-4"><div class="text-sm text-slate-500">Revenue</div><div class="text-xl font-bold">{{ money(data.summary.revenue) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">Cost of goods</div><div class="text-xl font-bold text-slate-600 dark:text-slate-300">{{ money(data.summary.cogs) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">Gross profit</div><div class="text-xl font-bold" :class="data.summary.profit < 0 ? 'text-red-600' : 'text-emerald-600'">{{ money(data.summary.profit) }}</div></div>
       </div>
 
       <!-- Due / stock totals -->
@@ -185,6 +199,24 @@ onMounted(async () => {
                 <td class="px-4 py-3 font-medium">{{ p.invoice_no }}</td><td class="px-4 py-3">{{ p.supplier?.name }}</td>
                 <td class="px-4 py-3 text-slate-400">{{ fmtDate(p.created_at) }}</td><td class="px-4 py-3">{{ money(p.total_amount) }}</td>
                 <td class="px-4 py-3 text-emerald-600">{{ money(p.paid_amount) }}</td><td class="px-4 py-3 text-amber-600">{{ money(p.due) }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Product profit -->
+          <table v-else-if="type === 'product-profit'" class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
+              <tr><th class="px-4 py-3">Product</th><th class="px-4 py-3 text-right">Units Sold</th><th class="px-4 py-3 text-right">Revenue</th><th class="px-4 py-3 text-right">COGS</th><th class="px-4 py-3 text-right">Profit</th><th class="px-4 py-3 text-right">Margin</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr v-if="!data.items.length"><td colspan="6" class="px-4 py-8 text-center text-slate-400">No sales in this range</td></tr>
+              <tr v-for="r in data.items" :key="r.product_id">
+                <td class="px-4 py-3 font-medium">{{ r.name }}</td>
+                <td class="px-4 py-3 text-right text-slate-500">{{ r.quantity_sold }}</td>
+                <td class="px-4 py-3 text-right">{{ money(r.revenue) }}</td>
+                <td class="px-4 py-3 text-right text-slate-500">{{ money(r.cogs) }}</td>
+                <td class="px-4 py-3 text-right font-semibold" :class="r.profit < 0 ? 'text-red-600' : 'text-emerald-600'">{{ money(r.profit) }}</td>
+                <td class="px-4 py-3 text-right">{{ r.margin.toFixed(1) }}%</td>
               </tr>
             </tbody>
           </table>

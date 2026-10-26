@@ -63,6 +63,7 @@ const groups = [
     items: [
       { name: 'Sales Report', to: '/reports/sales', icon: 'cart', perm: 'report.access' },
       { name: 'Purchase Report', to: '/reports/purchases', icon: 'bag', perm: 'report.access' },
+      { name: 'Product Profit', to: '/reports/product-profit', icon: 'trending', perm: 'report.access' },
       { name: 'Customer Due', to: '/reports/customer-due', icon: 'user', perm: 'report.access' },
       { name: 'Supplier Due', to: '/reports/supplier-due', icon: 'truck', perm: 'report.access' },
       { name: 'Current Stock', to: '/reports/stock', icon: 'cube', perm: 'report.access' },
