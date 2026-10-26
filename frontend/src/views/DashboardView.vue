@@ -10,8 +10,16 @@ const loading = ref(true)
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
+const hour = new Date().getHours()
+const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 const todayLabel = new Date().toLocaleDateString('en-US', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+})
+
+// All-time profit margin — a derived signal the API doesn't send directly.
+const profitMargin = computed(() => {
+  const sales = data.value?.finance.total_sales || 0
+  return sales > 0 ? (data.value.finance.total_profit / sales) * 100 : 0
 })
 
 // Top sellers are a magnitude comparison — one hue, bar length carries the value.
@@ -37,47 +45,69 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="loading" class="py-20 text-center text-slate-400">Loading dashboard…</div>
+  <!-- Skeleton while the summary loads -->
+  <div v-if="loading" class="space-y-5">
+    <div class="h-28 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-700/40" />
+    <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div v-for="n in 4" :key="n" class="h-24 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-700/40" />
+    </div>
+    <div class="grid gap-5 xl:grid-cols-5">
+      <div class="h-64 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-700/40 xl:col-span-3" />
+      <div class="h-64 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-700/40 xl:col-span-2" />
+    </div>
+  </div>
 
   <div v-else-if="data" class="space-y-5">
-    <header>
-      <h1 class="text-2xl font-bold tracking-tight">Dashboard</h1>
-      <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{{ todayLabel }}</p>
+    <header class="flex flex-wrap items-end justify-between gap-2">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">{{ greeting }} 👋</h1>
+        <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Here's your business overview · {{ todayLabel }}</p>
+      </div>
     </header>
 
-    <!-- Primary money KPIs -->
+    <!-- Hero: the three numbers that matter most, all-time -->
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-700 p-6 text-white shadow-lg shadow-brand-600/20 sm:p-7">
+      <div class="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:divide-x sm:divide-white/15">
+        <div class="sm:pr-6">
+          <div class="flex items-center gap-2 text-sm font-medium text-white/70">
+            <Icon name="cart" :size="16" /> Total sales
+          </div>
+          <div class="mt-1.5 text-3xl font-bold tracking-tight">{{ money(data.finance.total_sales) }}</div>
+        </div>
+        <div class="sm:px-6">
+          <div class="flex items-center gap-2 text-sm font-medium text-white/70">
+            <Icon name="trending" :size="16" /> Gross profit
+          </div>
+          <div class="mt-1.5 text-3xl font-bold tracking-tight">{{ money(data.finance.total_profit) }}</div>
+        </div>
+        <div class="sm:pl-6">
+          <div class="flex items-center gap-2 text-sm font-medium text-white/70">
+            <Icon name="wallet" :size="16" /> Profit margin
+          </div>
+          <div class="mt-1.5 text-3xl font-bold tracking-tight">
+            {{ data.finance.total_sales > 0 ? profitMargin.toFixed(1) + '%' : '—' }}
+          </div>
+        </div>
+      </div>
+      <!-- Soft decorative bubbles -->
+      <div class="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10" />
+      <div class="pointer-events-none absolute -bottom-20 right-28 h-52 w-52 rounded-full bg-white/5" />
+    </section>
+
+    <!-- Balances & stock -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Total sales" :value="money(data.finance.total_sales)" icon="cart" tone="emerald" to="/reports/sales" />
       <KpiCard label="Total purchase" :value="money(data.finance.total_purchase)" icon="bag" tone="blue" to="/reports/purchases" />
       <KpiCard label="Receivable" :value="money(data.finance.receivable)" icon="inbound" tone="amber" hint="Due from customers" to="/reports/customer-due" />
       <KpiCard label="Payable" :value="money(data.finance.payable)" icon="outbound" tone="red" hint="Due to suppliers" to="/reports/supplier-due" />
+      <KpiCard label="Stock value" :value="money(data.stock_value)" icon="wallet" tone="slate" to="/reports/stock" />
     </div>
 
-    <!-- Gross profit (net sales revenue − cost of goods sold) -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <KpiCard
-        label="Today's profit" :value="money(data.finance.today_profit)" icon="trending"
-        :tone="data.finance.today_profit < 0 ? 'red' : 'emerald'" hint="Revenue − cost of goods"
-      />
-      <KpiCard
-        label="This month's profit" :value="money(data.finance.month_profit)" icon="trending"
-        :tone="data.finance.month_profit < 0 ? 'red' : 'emerald'"
-      />
-      <KpiCard
-        label="Total profit" :value="money(data.finance.total_profit)" icon="wallet"
-        :tone="data.finance.total_profit < 0 ? 'red' : 'emerald'" hint="All-time gross profit"
-      />
-    </div>
-
-    <!-- Secondary metrics — deliberately lighter than the row above -->
+    <!-- Today & this month at a glance -->
     <div class="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <KpiCard compact label="Today's sales" :value="money(data.finance.today_sales)" icon="calendar" tone="slate" />
-      <KpiCard compact label="This month" :value="money(data.finance.month_sales)" icon="trending" tone="slate" />
-      <KpiCard compact label="Stock value" :value="money(data.stock_value)" icon="wallet" tone="slate" to="/reports/stock" />
-      <KpiCard
-        compact label="Low stock items" :value="data.low_stock_count" icon="alert"
-        :tone="data.low_stock_count > 0 ? 'amber' : 'slate'" to="/reports/stock"
-      />
+      <KpiCard compact label="Today's profit" :value="money(data.finance.today_profit)" icon="trending" :tone="data.finance.today_profit < 0 ? 'red' : 'emerald'" />
+      <KpiCard compact label="This month's sales" :value="money(data.finance.month_sales)" icon="calendar" tone="slate" />
+      <KpiCard compact label="This month's profit" :value="money(data.finance.month_profit)" icon="trending" :tone="data.finance.month_profit < 0 ? 'red' : 'emerald'" />
     </div>
 
     <!-- Catalogue counts: least important data, least ink — one compact strip -->
@@ -133,8 +163,13 @@ onMounted(async () => {
     <div class="grid items-start gap-5 lg:grid-cols-2">
       <!-- Low stock: icon + label, never colour alone -->
       <section class="card p-5">
-        <h2 class="mb-4 flex items-center gap-2 font-semibold">
-          <span class="text-amber-500"><Icon name="alert" :size="18" /></span> Low stock alerts
+        <h2 class="mb-4 flex items-center justify-between gap-2 font-semibold">
+          <span class="flex items-center gap-2">
+            <span class="text-amber-500"><Icon name="alert" :size="18" /></span> Low stock alerts
+          </span>
+          <span v-if="data.low_stock_count" class="badge bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
+            {{ data.low_stock_count }}
+          </span>
         </h2>
         <div v-if="!data.low_stock_products.length" class="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
           <Icon name="check" :size="16" /> All products are well stocked
