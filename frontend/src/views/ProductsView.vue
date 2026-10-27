@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import api, { assetUrl } from '../lib/api'
 import CrudPage from '../components/CrudPage.vue'
+import Modal from '../components/Modal.vue'
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
@@ -91,15 +92,113 @@ onMounted(async () => {
   categoryOptions.value = cats.data.data.map((c) => ({ value: c.id, label: c.name }))
   supplierOptions.value = sups.data.data.map((s) => ({ value: s.id, label: s.name }))
 })
+
+// ---- Stock adjustment -----------------------------------------------------
+const crud = ref(null) // CrudPage instance, so we can refresh the list after an adjustment
+const REASONS = ['damaged', 'lost', 'recount', 'found', 'other']
+const adjustProduct = ref(null)
+const adjustError = ref('')
+const adjustSaving = ref(false)
+const adjustForm = reactive({ direction: 'remove', quantity: 1, reason: 'damaged', note: '' })
+
+function openAdjust(row) {
+  adjustProduct.value = row
+  adjustError.value = ''
+  adjustForm.direction = 'remove'
+  adjustForm.quantity = 1
+  adjustForm.reason = 'damaged'
+  adjustForm.note = ''
+}
+
+// Preview the resulting stock so the user sees the effect before saving.
+const adjustResult = computed(() => {
+  if (!adjustProduct.value) return 0
+  const delta = (adjustForm.direction === 'add' ? 1 : -1) * Math.abs(Number(adjustForm.quantity) || 0)
+  return adjustProduct.value.quantity + delta
+})
+
+async function submitAdjust() {
+  const qty = Math.abs(Number(adjustForm.quantity) || 0)
+  if (qty <= 0) {
+    adjustError.value = 'Enter a quantity greater than zero'
+    return
+  }
+  adjustSaving.value = true
+  adjustError.value = ''
+  try {
+    const change = (adjustForm.direction === 'add' ? 1 : -1) * qty
+    await api.post(`/products/${adjustProduct.value.id}/adjust-stock`, {
+      change,
+      reason: adjustForm.reason,
+      note: adjustForm.note,
+    })
+    adjustProduct.value = null
+    crud.value?.load()
+  } catch (e) {
+    adjustError.value = e.response?.data?.message || 'Failed to adjust stock'
+  } finally {
+    adjustSaving.value = false
+  }
+}
 </script>
 
 <template>
-  <CrudPage title="Products" endpoint="/products" export-endpoint="/products/export" :columns="columns" :fields="fields" :new-item="newItem" :extra-params="extraParams">
+  <CrudPage ref="crud" title="Products" endpoint="/products" export-endpoint="/products/export" :columns="columns" :fields="fields" :new-item="newItem" :extra-params="extraParams">
     <template #filters>
       <label class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40">
         <input v-model="lowStock" type="checkbox" class="h-4 w-4 rounded text-brand-600" />
         Low stock only
       </label>
     </template>
+    <template #row-actions="{ row }">
+      <button class="btn-ghost !px-2 !py-1 text-xs" @click="openAdjust(row)">Adjust</button>
+    </template>
   </CrudPage>
+
+  <!-- Manual stock adjustment -->
+  <Modal v-if="adjustProduct" :title="`Adjust Stock — ${adjustProduct.name}`" @close="adjustProduct = null">
+    <form class="space-y-4" @submit.prevent="submitAdjust">
+      <div v-if="adjustError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10">{{ adjustError }}</div>
+
+      <div class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500 dark:bg-slate-700/40 dark:text-slate-300">
+        Current stock: <span class="font-semibold text-slate-700 dark:text-slate-100">{{ adjustProduct.quantity }} {{ adjustProduct.unit }}</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="label">Action</label>
+          <select v-model="adjustForm.direction" class="input">
+            <option value="remove">Remove (−)</option>
+            <option value="add">Add (+)</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Quantity</label>
+          <input v-model="adjustForm.quantity" type="number" min="1" class="input" />
+        </div>
+      </div>
+
+      <div>
+        <label class="label">Reason</label>
+        <select v-model="adjustForm.reason" class="input">
+          <option v-for="r in REASONS" :key="r" :value="r" class="capitalize">{{ r }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="label">Note (optional)</label>
+        <input v-model="adjustForm.note" class="input" placeholder="e.g. broken during handling" />
+      </div>
+
+      <div class="rounded-lg px-3 py-2 text-sm" :class="adjustResult < 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'">
+        New stock will be: <span class="font-semibold">{{ adjustResult }} {{ adjustProduct.unit }}</span>
+        <span v-if="adjustResult < 0"> — can't go below zero</span>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" class="btn-ghost" @click="adjustProduct = null">Cancel</button>
+        <button type="submit" class="btn-primary" :disabled="adjustSaving || adjustResult < 0">{{ adjustSaving ? 'Saving…' : 'Save adjustment' }}</button>
+      </div>
+    </form>
+  </Modal>
 </template>

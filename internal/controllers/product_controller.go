@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"inventory-api/internal/middleware"
 	"inventory-api/internal/models"
+	"inventory-api/internal/repositories"
 	"inventory-api/internal/services"
 	"inventory-api/pkg/pagination"
 	"inventory-api/pkg/response"
@@ -45,6 +47,15 @@ type UpdateProductRequest struct {
 	Unit         string  `json:"unit" binding:"max=20"`
 	IsActive     *bool   `json:"is_active"`
 	ReorderLevel *int    `json:"reorder_level" binding:"omitempty,gte=0"`
+}
+
+// AdjustStockRequest manually corrects stock. Change is signed: positive adds
+// units (stock found), negative removes them (damage, loss). `required` rejects
+// a zero change.
+type AdjustStockRequest struct {
+	Change int    `json:"change" binding:"required"`
+	Reason string `json:"reason" binding:"required,max=30"`
+	Note   string `json:"note" binding:"max=255"`
 }
 
 // ---- Controller ------------------------------------------------------------
@@ -201,6 +212,74 @@ func (ctrl *ProductController) Export(c *gin.Context) {
 			status(p.IsActive),
 		})
 	}
+}
+
+// AdjustStock godoc
+// @Summary  Manually adjust a product's stock (damage, loss, recount, found)
+// @Tags     Products
+// @Accept   json
+// @Produce  json
+// @Security BearerAuth
+// @Param    id    path      int                 true  "Product ID"
+// @Param    body  body      AdjustStockRequest  true  "Adjustment"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /products/{id}/adjust-stock [post]
+func (ctrl *ProductController) AdjustStock(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid product id", nil)
+		return
+	}
+
+	var req AdjustStockRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid adjustment", nil)
+		return
+	}
+
+	adj, err := ctrl.service.AdjustStock(id, middleware.UserID(c), req.Change, req.Reason, req.Note)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrProductNotFound):
+			response.NotFound(c, "Product not found")
+		case errors.Is(err, repositories.ErrInsufficientStock):
+			response.BadRequest(c, "Adjustment would make stock negative", nil)
+		case errors.Is(err, services.ErrInvalidAdjustment):
+			response.BadRequest(c, err.Error(), nil)
+		default:
+			response.InternalError(c, "Failed to adjust stock")
+		}
+		return
+	}
+	response.Success(c, "Stock adjusted", adj)
+}
+
+// StockHistory godoc
+// @Summary  List a product's stock adjustment history (paginated)
+// @Tags     Products
+// @Produce  json
+// @Security BearerAuth
+// @Param    id        path   int  true   "Product ID"
+// @Param    page      query  int  false  "Page number"
+// @Param    per_page  query  int  false  "Items per page"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /products/{id}/stock-history [get]
+func (ctrl *ProductController) StockHistory(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		response.BadRequest(c, "Invalid product id", nil)
+		return
+	}
+
+	p := pagination.Parse(c)
+	rows, total, err := ctrl.service.StockHistory(id, p.Page, p.PerPage)
+	if err != nil {
+		response.InternalError(c, "Failed to fetch stock history")
+		return
+	}
+	response.Paginated(c, "Stock history", rows, response.Meta{
+		Page: p.Page, PerPage: p.PerPage, Total: total, TotalPages: pagination.TotalPages(total, p.PerPage),
+	})
 }
 
 // Get godoc

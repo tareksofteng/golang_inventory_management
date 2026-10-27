@@ -1,5 +1,19 @@
 basePath: /api/v1
 definitions:
+  internal_controllers.AdjustStockRequest:
+    properties:
+      change:
+        type: integer
+      note:
+        maxLength: 255
+        type: string
+      reason:
+        maxLength: 30
+        type: string
+    required:
+    - change
+    - reason
+    type: object
   internal_controllers.CreateAccountRequest:
     properties:
       code:
@@ -1249,6 +1263,64 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a product
+      tags:
+      - Products
+  /products/{id}/adjust-stock:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Adjustment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_controllers.AdjustStockRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Manually adjust a product's stock (damage, loss, recount, found)
+      tags:
+      - Products
+  /products/{id}/stock-history:
+    get:
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List a product's stock adjustment history (paginated)
       tags:
       - Products
   /products/export:

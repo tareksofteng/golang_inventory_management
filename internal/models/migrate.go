@@ -24,6 +24,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&Supplier{},
 		&Product{},
 		&StockIn{},
+		&StockAdjustment{},
 		&Purchase{},
 		&PurchaseItem{},
 		&Sale{},
