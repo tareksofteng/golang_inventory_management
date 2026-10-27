@@ -15,6 +15,12 @@ type ProductRepository interface {
 	Update(product *models.Product) error
 	Delete(id uint) error
 	ExistsBySKU(sku string, excludeID uint) (bool, error)
+
+	// AdjustStock moves a product's quantity by `change` (+/-) and logs the
+	// reason in one transaction. It never lets stock go negative.
+	AdjustStock(productID, userID uint, change int, reason, note string) (*models.StockAdjustment, error)
+	// StockAdjustments returns a product's adjustment history, newest first.
+	StockAdjustments(productID uint, offset, limit int) ([]models.StockAdjustment, int64, error)
 }
 
 type productRepository struct {
@@ -27,6 +33,57 @@ func NewProductRepository(db *gorm.DB) ProductRepository {
 
 func (r *productRepository) Create(product *models.Product) error {
 	return r.db.Create(product).Error
+}
+
+// AdjustStock changes a product's quantity by `change` and records the reason,
+// atomically. A removal that would drive stock below zero is rejected with
+// ErrInsufficientStock and nothing is written.
+func (r *productRepository) AdjustStock(productID, userID uint, change int, reason, note string) (*models.StockAdjustment, error) {
+	var adj *models.StockAdjustment
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var product models.Product
+		if err := tx.First(&product, productID).Error; err != nil {
+			return err
+		}
+
+		newQty := product.Quantity + change
+		if newQty < 0 {
+			return ErrInsufficientStock
+		}
+
+		if err := tx.Model(&models.Product{}).
+			Where("id = ?", productID).
+			Update("quantity", newQty).Error; err != nil {
+			return err
+		}
+
+		adj = &models.StockAdjustment{
+			ProductID:   productID,
+			UserID:      userID,
+			Change:      change,
+			NewQuantity: newQty,
+			Reason:      reason,
+			Note:        note,
+		}
+		return tx.Create(adj).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return adj, nil
+}
+
+// StockAdjustments returns one product's adjustment history (newest first).
+func (r *productRepository) StockAdjustments(productID uint, offset, limit int) ([]models.StockAdjustment, int64, error) {
+	var rows []models.StockAdjustment
+	var total int64
+
+	q := r.db.Model(&models.StockAdjustment{}).Where("product_id = ?", productID)
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := q.Order("id DESC").Offset(offset).Limit(limit).Find(&rows).Error
+	return rows, total, err
 }
 
 // FindAll returns paginated products (searched by name or SKU) with their

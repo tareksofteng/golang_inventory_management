@@ -233,5 +233,7 @@ func registerProductRoutes(rg *gin.RouterGroup, ctrl *controllers.ProductControl
 		g.GET("/:id", ctrl.Get)
 		g.PUT("/:id", ctrl.Update)
 		g.DELETE("/:id", ctrl.Delete)
+		g.POST("/:id/adjust-stock", ctrl.AdjustStock)
+		g.GET("/:id/stock-history", ctrl.StockHistory)
 	}
 }

@@ -199,6 +199,7 @@ defineExpose({ load })
                 <span v-html="col.render ? col.render(row) : row[col.key]" />
               </td>
               <td class="px-4 py-3 text-right">
+                <slot name="row-actions" :row="row" />
                 <button class="btn-ghost !px-2 !py-1 text-xs" @click="openEdit(row)">Edit</button>
                 <button class="btn-danger !px-2 !py-1 text-xs" @click="remove(row)">Delete</button>
               </td>

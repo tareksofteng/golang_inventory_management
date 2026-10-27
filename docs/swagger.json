@@ -1347,6 +1347,98 @@
                 }
             }
         },
+        "/products/{id}/adjust-stock": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Manually adjust a product's stock (damage, loss, recount, found)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Adjustment",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_controllers.AdjustStockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}/stock-history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Products"
+                ],
+                "summary": "List a product's stock adjustment history (paginated)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/purchases": {
             "get": {
                 "security": [
@@ -2273,6 +2365,26 @@
         }
     },
     "definitions": {
+        "internal_controllers.AdjustStockRequest": {
+            "type": "object",
+            "required": [
+                "change",
+                "reason"
+            ],
+            "properties": {
+                "change": {
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "reason": {
+                    "type": "string",
+                    "maxLength": 30
+                }
+            }
+        },
         "internal_controllers.CreateAccountRequest": {
             "type": "object",
             "required": [

@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ErrProductNotFound = errors.New("product not found")
-	ErrProductSKUTaken = errors.New("product SKU already exists")
+	ErrProductNotFound   = errors.New("product not found")
+	ErrProductSKUTaken   = errors.New("product SKU already exists")
+	ErrInvalidAdjustment = errors.New("stock adjustment must be a non-zero quantity with a reason")
 	// Reused for foreign-key validation: the referenced category/supplier
 	// does not exist. (ErrCategoryNotFound / ErrSupplierNotFound are declared
 	// in the category/supplier services — same package, so we reuse them.)
@@ -22,6 +23,8 @@ type ProductService interface {
 	List(search string, lowStockOnly bool, page, perPage int) ([]models.Product, int64, error)
 	Export(search string, lowStockOnly bool) ([]models.Product, error)
 	Get(id uint) (*models.Product, error)
+	AdjustStock(productID, userID uint, change int, reason, note string) (*models.StockAdjustment, error)
+	StockHistory(productID uint, page, perPage int) ([]models.StockAdjustment, int64, error)
 	Update(id uint, data *models.Product) (*models.Product, error)
 	Delete(id uint) error
 }
@@ -106,6 +109,26 @@ func (s *productService) Get(id uint) (*models.Product, error) {
 		return nil, err
 	}
 	return product, nil
+}
+
+// AdjustStock validates the request, then delegates the atomic change to the
+// repository. change must be non-zero and reason must be present.
+func (s *productService) AdjustStock(productID, userID uint, change int, reason, note string) (*models.StockAdjustment, error) {
+	if change == 0 || reason == "" {
+		return nil, ErrInvalidAdjustment
+	}
+	adj, err := s.repo.AdjustStock(productID, userID, change, reason, note)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound
+		}
+		return nil, err
+	}
+	return adj, nil
+}
+
+func (s *productService) StockHistory(productID uint, page, perPage int) ([]models.StockAdjustment, int64, error) {
+	return s.repo.StockAdjustments(productID, (page-1)*perPage, perPage)
 }
 
 // Update changes product details but NOT Quantity — stock levels only move
