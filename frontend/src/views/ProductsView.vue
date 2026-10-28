@@ -100,6 +100,20 @@ const adjustProduct = ref(null)
 const adjustError = ref('')
 const adjustSaving = ref(false)
 const adjustForm = reactive({ direction: 'remove', quantity: 1, reason: 'damaged', note: '' })
+const history = ref([])
+const historyLoading = ref(false)
+const fmtDate = (d) => new Date(d).toLocaleDateString()
+
+async function loadHistory(productId) {
+  historyLoading.value = true
+  history.value = []
+  try {
+    const { data } = await api.get(`/products/${productId}/stock-history`, { params: { per_page: 5 } })
+    history.value = data.data
+  } finally {
+    historyLoading.value = false
+  }
+}
 
 function openAdjust(row) {
   adjustProduct.value = row
@@ -108,6 +122,7 @@ function openAdjust(row) {
   adjustForm.quantity = 1
   adjustForm.reason = 'damaged'
   adjustForm.note = ''
+  loadHistory(row.id)
 }
 
 // Preview the resulting stock so the user sees the effect before saving.
@@ -193,6 +208,22 @@ async function submitAdjust() {
       <div class="rounded-lg px-3 py-2 text-sm" :class="adjustResult < 0 ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'">
         New stock will be: <span class="font-semibold">{{ adjustResult }} {{ adjustProduct.unit }}</span>
         <span v-if="adjustResult < 0"> — can't go below zero</span>
+      </div>
+
+      <!-- Recent adjustment history for this product -->
+      <div class="border-t border-slate-100 pt-3 dark:border-slate-700">
+        <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Recent adjustments</div>
+        <p v-if="historyLoading" class="text-sm text-slate-400">Loading…</p>
+        <p v-else-if="!history.length" class="text-sm text-slate-400">No adjustments yet</p>
+        <ul v-else class="space-y-1.5">
+          <li v-for="h in history" :key="h.id" class="flex items-center justify-between gap-3 text-sm">
+            <span class="flex items-center gap-2">
+              <span class="font-semibold" :class="h.change < 0 ? 'text-red-600' : 'text-emerald-600'">{{ h.change > 0 ? '+' : '' }}{{ h.change }}</span>
+              <span class="capitalize text-slate-500 dark:text-slate-300">{{ h.reason }}</span>
+            </span>
+            <span class="text-xs text-slate-400">→ {{ h.new_quantity }} · {{ fmtDate(h.created_at) }}</span>
+          </li>
+        </ul>
       </div>
 
       <div class="flex justify-end gap-2 pt-1">
