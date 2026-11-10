@@ -93,6 +93,47 @@ onMounted(async () => {
   supplierOptions.value = sups.data.data.map((s) => ({ value: s.id, label: s.name }))
 })
 
+// ---- CSV import -----------------------------------------------------------
+const showImport = ref(false)
+const importFile = ref(null)
+const importing = ref(false)
+const importError = ref('')
+const importResult = ref(null)
+
+function openImport() {
+  showImport.value = true
+  importFile.value = null
+  importError.value = ''
+  importResult.value = null
+}
+
+function onImportFile(e) {
+  importFile.value = e.target.files[0] || null
+}
+
+async function submitImport() {
+  if (!importFile.value) {
+    importError.value = 'Choose a CSV file first'
+    return
+  }
+  importing.value = true
+  importError.value = ''
+  importResult.value = null
+  try {
+    const fd = new FormData()
+    fd.append('file', importFile.value)
+    const { data } = await api.post('/products/import', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    importResult.value = data.data
+    if (data.data.created > 0) crud.value?.load()
+  } catch (e) {
+    importError.value = e.response?.data?.message || 'Import failed'
+  } finally {
+    importing.value = false
+  }
+}
+
 // ---- Stock adjustment -----------------------------------------------------
 const crud = ref(null) // CrudPage instance, so we can refresh the list after an adjustment
 const REASONS = ['damaged', 'lost', 'recount', 'found', 'other']
@@ -164,11 +205,47 @@ async function submitAdjust() {
         <input v-model="lowStock" type="checkbox" class="h-4 w-4 rounded text-brand-600" />
         Low stock only
       </label>
+      <button class="btn-ghost whitespace-nowrap" @click="openImport">Import CSV</button>
     </template>
     <template #row-actions="{ row }">
       <button class="btn-ghost !px-2 !py-1 text-xs" @click="openAdjust(row)">Adjust</button>
     </template>
   </CrudPage>
+
+  <!-- Bulk CSV import -->
+  <Modal v-if="showImport" title="Import Products from CSV" @close="showImport = false">
+    <div class="space-y-4">
+      <div v-if="importError" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-500/10">{{ importError }}</div>
+
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Columns (matched by header, any order):
+        <span class="font-medium text-slate-700 dark:text-slate-200">Name, SKU, Category, Supplier, Price, Cost, Quantity, Reorder, Unit</span>.
+        Category and Supplier are matched by name and must already exist. Tip: export your products first to get a ready-made template.
+      </p>
+
+      <input type="file" accept=".csv,text/csv" class="input" @change="onImportFile" />
+
+      <!-- Result summary -->
+      <div v-if="importResult" class="space-y-2">
+        <div class="flex gap-3 text-sm">
+          <span class="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">{{ importResult.created }} created</span>
+          <span v-if="importResult.failed" class="badge bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300">{{ importResult.failed }} failed</span>
+        </div>
+        <ul v-if="importResult.errors?.length" class="max-h-40 space-y-1 overflow-y-auto text-sm">
+          <li v-for="(err, i) in importResult.errors" :key="i" class="text-slate-500 dark:text-slate-400">
+            <span class="font-medium text-red-600">Row {{ err.row }}:</span> {{ err.message }}
+          </li>
+        </ul>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" class="btn-ghost" @click="showImport = false">Close</button>
+        <button type="button" class="btn-primary" :disabled="importing || !importFile" @click="submitImport">
+          {{ importing ? 'Importing…' : 'Import' }}
+        </button>
+      </div>
+    </div>
+  </Modal>
 
   <!-- Manual stock adjustment -->
   <Modal v-if="adjustProduct" :title="`Adjust Stock — ${adjustProduct.name}`" @close="adjustProduct = null">
