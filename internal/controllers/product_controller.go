@@ -214,6 +214,37 @@ func (ctrl *ProductController) Export(c *gin.Context) {
 	}
 }
 
+// Import godoc
+// @Summary  Bulk-import products from a CSV file (matched by header name)
+// @Tags     Products
+// @Accept   multipart/form-data
+// @Produce  json
+// @Security BearerAuth
+// @Param    file  formData  file  true  "CSV file"
+// @Success  200   {object}  map[string]interface{}
+// @Router   /products/import [post]
+func (ctrl *ProductController) Import(c *gin.Context) {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "A CSV file is required", nil)
+		return
+	}
+
+	f, err := fileHeader.Open()
+	if err != nil {
+		response.BadRequest(c, "Could not open the uploaded file", nil)
+		return
+	}
+	defer f.Close()
+
+	result, err := ctrl.service.ImportCSV(f)
+	if err != nil {
+		response.BadRequest(c, err.Error(), nil)
+		return
+	}
+	response.Success(c, "Import finished", result)
+}
+
 // AdjustStock godoc
 // @Summary  Manually adjust a product's stock (damage, loss, recount, found)
 // @Tags     Products

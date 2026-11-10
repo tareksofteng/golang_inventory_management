@@ -1346,6 +1346,29 @@ paths:
       summary: Export products as CSV (honours the search and low-stock filters)
       tags:
       - Products
+  /products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk-import products from a CSV file (matched by header name)
+      tags:
+      - Products
   /purchases:
     get:
       parameters:
