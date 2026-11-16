@@ -89,7 +89,13 @@ const groups = [
       { name: 'Balance Sheet', to: '/balance-sheet', icon: 'card', perm: 'account.manage' },
     ],
   },
-  { title: 'Administration', items: [{ name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' }] },
+  {
+    title: 'Administration',
+    items: [
+      { name: 'Users', to: '/users', icon: 'users', perm: 'user.manage' },
+      { name: 'Audit Log', to: '/audit-logs', icon: 'receipt', perm: 'user.manage' },
+    ],
+  },
 ]
 
 function canSee(item) {

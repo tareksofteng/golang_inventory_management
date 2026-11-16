@@ -23,6 +23,7 @@ import ProfitLossView from '../views/ProfitLossView.vue'
 import BalanceSheetView from '../views/BalanceSheetView.vue'
 import ExpenseView from '../views/ExpenseView.vue'
 import UsersView from '../views/UsersView.vue'
+import AuditLogView from '../views/AuditLogView.vue'
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
@@ -53,6 +54,7 @@ const routes = [
       { path: 'balance-sheet', name: 'balance-sheet', component: BalanceSheetView, meta: { perm: 'account.manage' } },
       { path: 'expense', name: 'expense', component: ExpenseView, meta: { perm: 'account.manage' } },
       { path: 'users', name: 'users', component: UsersView, meta: { perm: 'user.manage' } },
+      { path: 'audit-logs', name: 'audit-logs', component: AuditLogView, meta: { perm: 'user.manage' } },
     ],
   },
   // Catch-all: unknown URLs fall back to the dashboard instead of a blank page.
