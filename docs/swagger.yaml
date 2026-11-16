@@ -662,6 +662,30 @@ paths:
       summary: List all active accounts (for journal dropdowns)
       tags:
       - Accounts
+  /audit-logs:
+    get:
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List the write-operation audit trail (paginated, newest first)
+      tags:
+      - Audit
   /auth/login:
     post:
       consumes:

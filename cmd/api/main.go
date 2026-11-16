@@ -74,6 +74,11 @@ func main() {
 	router := gin.Default()
 	router.Use(middleware.CORS()) // allow the Vue frontend to call the API
 
+	// Record every data-changing request in the audit trail (best-effort). It
+	// runs after the handler, so the user id and final status are available.
+	auditRepo := repositories.NewAuditLogRepository(db)
+	router.Use(middleware.AuditLog(auditRepo))
+
 	// Serve uploaded images at /uploads/... (created on startup if missing).
 	_ = os.MkdirAll("uploads", 0o755)
 	router.Static("/uploads", "./uploads")
@@ -164,6 +169,7 @@ func main() {
 	accountController := controllers.NewAccountController(accountService)
 	journalController := controllers.NewJournalController(journalService)
 	accountingController := controllers.NewAccountingController(services.NewAccountingService(journalRepo, accountRepo))
+	auditController := controllers.NewAuditController(auditRepo)
 
 	// 8. Register all API routes.
 	routes.Register(router, routes.Controllers{
@@ -184,6 +190,7 @@ func main() {
 		Account:    accountController,
 		Journal:    journalController,
 		Accounting: accountingController,
+		Audit:      auditController,
 	}, tokenManager)
 
 	// 9. Start the server. router.Run blocks forever (until the process is

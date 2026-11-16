@@ -37,5 +37,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&Account{},
 		&JournalEntry{},
 		&JournalLine{},
+		&AuditLog{},
 	)
 }

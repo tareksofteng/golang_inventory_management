@@ -28,6 +28,7 @@ type Controllers struct {
 	Account    *controllers.AccountController
 	Journal    *controllers.JournalController
 	Accounting *controllers.AccountingController
+	Audit      *controllers.AuditController
 }
 
 // Register mounts all API routes under /api/v1. Auth endpoints are public;
@@ -66,6 +67,9 @@ func Register(router *gin.Engine, c Controllers, tm *auth.TokenManager) {
 	registerReturnRoutes(protected, c.Return)
 	registerLedgerRoutes(protected, c.Ledger)
 	registerAccountingRoutes(protected, c.Account, c.Journal, c.Accounting)
+
+	// Audit trail is admin-only (same permission that guards user management).
+	protected.GET("/audit-logs", middleware.RequirePermission(rbac.PermUserManage), c.Audit.List)
 }
 
 // registerAccountingRoutes wires the accounting module (chart of accounts,
