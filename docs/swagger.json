@@ -1746,6 +1746,39 @@
                 }
             }
         },
+        "/reports/receivable-aging": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Receivables aging report (outstanding customer balances by age)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "As-of date (YYYY-MM-DD), defaults to today",
+                        "name": "as_of",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/reports/sales": {
             "get": {
                 "security": [

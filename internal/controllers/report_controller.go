@@ -60,6 +60,32 @@ func (ctrl *ReportController) Sales(c *gin.Context) {
 	response.Success(c, "Sales report", report)
 }
 
+// ReceivableAging godoc
+// @Summary  Receivables aging report (outstanding customer balances by age)
+// @Tags     Reports
+// @Produce  json
+// @Security BearerAuth
+// @Param    as_of  query  string  false  "As-of date (YYYY-MM-DD), defaults to today"
+// @Success  200    {object}  map[string]interface{}
+// @Router   /reports/receivable-aging [get]
+func (ctrl *ReportController) ReceivableAging(c *gin.Context) {
+	// As-of defaults to now; an explicit date is taken at end-of-day so an
+	// invoice made that same day counts as 0 days old.
+	asOf := time.Now()
+	if v := c.Query("as_of"); v != "" {
+		if t, err := time.ParseInLocation("2006-01-02", v, time.Now().Location()); err == nil {
+			asOf = t.Add(24*time.Hour - time.Second)
+		}
+	}
+
+	report, err := ctrl.service.ReceivableAging(asOf)
+	if err != nil {
+		response.InternalError(c, "Failed to build receivables aging")
+		return
+	}
+	response.Success(c, "Receivables aging", report)
+}
+
 // ProductProfit godoc
 // @Summary  Product profitability report for a date range (revenue, COGS, profit per product)
 // @Tags     Reports

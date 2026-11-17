@@ -27,6 +27,7 @@ type ReportRepository interface {
 	SuppliersWithDue() ([]models.Supplier, error)
 	StockReport(categoryID uint) ([]models.Product, error)
 	ProductProfit(from, to time.Time) ([]ProductProfitRow, error)
+	UnpaidSales() ([]models.Sale, error)
 }
 
 type reportRepository struct {
@@ -76,6 +77,14 @@ func (r *reportRepository) PurchasesBetween(from, to time.Time) ([]models.Purcha
 		Order("id DESC").
 		Find(&purchases).Error
 	return purchases, err
+}
+
+// UnpaidSales returns every sale with an outstanding balance, oldest first,
+// with the customer preloaded — the raw material for a receivables aging report.
+func (r *reportRepository) UnpaidSales() ([]models.Sale, error) {
+	var sales []models.Sale
+	err := r.db.Preload("Customer").Where("due > 0").Order("created_at ASC").Find(&sales).Error
+	return sales, err
 }
 
 // CustomersWithDue lists customers who owe money, biggest first.

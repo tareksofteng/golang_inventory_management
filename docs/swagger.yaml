@@ -1537,6 +1537,26 @@ paths:
       summary: Purchase report for a date range
       tags:
       - Reports
+  /reports/receivable-aging:
+    get:
+      parameters:
+      - description: As-of date (YYYY-MM-DD), defaults to today
+        in: query
+        name: as_of
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Receivables aging report (outstanding customer balances by age)
+      tags:
+      - Reports
   /reports/sales:
     get:
       parameters:

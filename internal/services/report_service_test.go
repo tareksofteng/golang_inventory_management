@@ -4,18 +4,24 @@ import (
 	"testing"
 	"time"
 
+	"inventory-api/internal/models"
 	"inventory-api/internal/repositories"
 )
 
-// stubReportRepo returns canned ProductProfit rows; every other ReportRepository
-// method is unreachable in these tests (and would panic via the embedded nil).
+// stubReportRepo returns canned data; ReportRepository methods we don't set here
+// are unreachable in a given test (and would panic via the embedded nil).
 type stubReportRepo struct {
 	repositories.ReportRepository
-	rows []repositories.ProductProfitRow
+	rows  []repositories.ProductProfitRow
+	sales []models.Sale
 }
 
 func (s stubReportRepo) ProductProfit(_, _ time.Time) ([]repositories.ProductProfitRow, error) {
 	return s.rows, nil
+}
+
+func (s stubReportRepo) UnpaidSales() ([]models.Sale, error) {
+	return s.sales, nil
 }
 
 // The report service turns raw revenue/COGS rows into per-product profit and

@@ -150,6 +150,7 @@ func registerReportRoutes(rg *gin.RouterGroup, ctrl *controllers.ReportControlle
 		g.GET("/sales", ctrl.Sales)
 		g.GET("/purchases", ctrl.Purchases)
 		g.GET("/product-profit", ctrl.ProductProfit)
+		g.GET("/receivable-aging", ctrl.ReceivableAging)
 		g.GET("/customer-due", ctrl.CustomerDue)
 		g.GET("/supplier-due", ctrl.SupplierDue)
 		g.GET("/stock", ctrl.Stock)
