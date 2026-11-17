@@ -12,6 +12,7 @@ const REPORTS = {
   sales: { label: 'Sales Report', endpoint: '/reports/sales', ranged: true },
   purchases: { label: 'Purchase Report', endpoint: '/reports/purchases', ranged: true },
   'product-profit': { label: 'Product Profit Report', endpoint: '/reports/product-profit', ranged: true },
+  'receivable-aging': { label: 'Receivables Aging', endpoint: '/reports/receivable-aging', ranged: false },
   'customer-due': { label: 'Customer Due Report', endpoint: '/reports/customer-due', ranged: false },
   'supplier-due': { label: 'Supplier Due Report', endpoint: '/reports/supplier-due', ranged: false },
   stock: { label: 'Current Stock Report', endpoint: '/reports/stock', ranged: false },
@@ -70,6 +71,12 @@ function buildCsv() {
     return {
       headers: ['Product', 'Units Sold', 'Revenue', 'COGS', 'Profit', 'Margin %'],
       rows: d.items.map((r) => [r.name, r.quantity_sold, r.revenue, r.cogs, r.profit, r.margin.toFixed(1)]),
+    }
+  }
+  if (type.value === 'receivable-aging') {
+    return {
+      headers: ['Customer', 'Current', '31-60 days', '61-90 days', '90+ days', 'Total'],
+      rows: d.rows.map((r) => [r.customer || '—', r.current, r.days_30, r.days_60, r.days_90, r.total]),
     }
   }
   if (type.value === 'customer-due' || type.value === 'supplier-due') {
@@ -160,6 +167,15 @@ onMounted(async () => {
         <div class="card p-4"><div class="text-sm text-slate-500">Gross profit</div><div class="text-xl font-bold" :class="data.summary.profit < 0 ? 'text-red-600' : 'text-emerald-600'">{{ money(data.summary.profit) }}</div></div>
       </div>
 
+      <!-- Receivables aging: bucket totals -->
+      <div v-if="type === 'receivable-aging'" class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div class="card p-4"><div class="text-sm text-slate-500">Current</div><div class="text-xl font-bold text-emerald-600">{{ money(data.totals.current) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">31–60 days</div><div class="text-xl font-bold text-amber-600">{{ money(data.totals.days_30) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">61–90 days</div><div class="text-xl font-bold text-orange-600">{{ money(data.totals.days_60) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">90+ days</div><div class="text-xl font-bold text-red-600">{{ money(data.totals.days_90) }}</div></div>
+        <div class="card p-4"><div class="text-sm text-slate-500">Total due</div><div class="text-xl font-bold">{{ money(data.totals.total) }}</div></div>
+      </div>
+
       <!-- Due / stock totals -->
       <div v-if="type === 'customer-due' || type === 'supplier-due'" class="card p-4">
         <span class="text-sm text-slate-500">Total Outstanding: </span>
@@ -217,6 +233,24 @@ onMounted(async () => {
                 <td class="px-4 py-3 text-right text-slate-500">{{ money(r.cogs) }}</td>
                 <td class="px-4 py-3 text-right font-semibold" :class="r.profit < 0 ? 'text-red-600' : 'text-emerald-600'">{{ money(r.profit) }}</td>
                 <td class="px-4 py-3 text-right">{{ r.margin.toFixed(1) }}%</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Receivables aging -->
+          <table v-else-if="type === 'receivable-aging'" class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-700/40">
+              <tr><th class="px-4 py-3">Customer</th><th class="px-4 py-3 text-right">Current</th><th class="px-4 py-3 text-right">31–60</th><th class="px-4 py-3 text-right">61–90</th><th class="px-4 py-3 text-right">90+</th><th class="px-4 py-3 text-right">Total</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr v-if="!data.rows.length"><td colspan="6" class="px-4 py-8 text-center text-slate-400">No outstanding receivables 🎉</td></tr>
+              <tr v-for="r in data.rows" :key="r.customer_id">
+                <td class="px-4 py-3 font-medium">{{ r.customer || '—' }}</td>
+                <td class="px-4 py-3 text-right">{{ r.current ? money(r.current) : '' }}</td>
+                <td class="px-4 py-3 text-right text-amber-600">{{ r.days_30 ? money(r.days_30) : '' }}</td>
+                <td class="px-4 py-3 text-right text-orange-600">{{ r.days_60 ? money(r.days_60) : '' }}</td>
+                <td class="px-4 py-3 text-right text-red-600">{{ r.days_90 ? money(r.days_90) : '' }}</td>
+                <td class="px-4 py-3 text-right font-semibold">{{ money(r.total) }}</td>
               </tr>
             </tbody>
           </table>
