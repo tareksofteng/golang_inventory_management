@@ -10,6 +10,32 @@ const loading = ref(true)
 
 const money = (n) => '৳' + Number(n || 0).toLocaleString('en-IN')
 
+// Hero figures count up from zero on load. Animated refs drive the display;
+// bars reveal once `revealed` flips. Everything honours reduced-motion.
+const animSales = ref(0)
+const animProfit = ref(0)
+const animMargin = ref(0)
+const revealed = ref(false)
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// animateValue tweens a ref from 0 to target with an ease-out curve.
+function animateValue(target, out, duration = 900) {
+  if (prefersReducedMotion()) {
+    out.value = target
+    return
+  }
+  const start = performance.now()
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / duration)
+    out.value = target * (1 - Math.pow(1 - t, 3)) // easeOutCubic
+    if (t < 1) requestAnimationFrame(step)
+    else out.value = target
+  }
+  requestAnimationFrame(step)
+}
+
 const hour = new Date().getHours()
 const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 const todayLabel = new Date().toLocaleDateString('en-US', {
@@ -38,6 +64,11 @@ onMounted(async () => {
   try {
     const res = await api.get('/dashboard/summary')
     data.value = res.data.data
+    // Kick off the entrance animations once the numbers are in.
+    animateValue(data.value.finance.total_sales, animSales)
+    animateValue(data.value.finance.total_profit, animProfit)
+    animateValue(profitMargin.value, animMargin)
+    requestAnimationFrame(() => (revealed.value = true))
   } finally {
     loading.value = false
   }
@@ -57,7 +88,7 @@ onMounted(async () => {
     </div>
   </div>
 
-  <div v-else-if="data" class="space-y-5">
+  <div v-else-if="data" class="dash-reveal space-y-5">
     <header class="flex flex-wrap items-end justify-between gap-2">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">{{ greeting }} 👋</h1>
@@ -66,26 +97,26 @@ onMounted(async () => {
     </header>
 
     <!-- Hero: the three numbers that matter most, all-time -->
-    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-700 p-6 text-white shadow-lg shadow-brand-600/20 sm:p-7">
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-700 p-6 text-white shadow-lg shadow-brand-600/20 transition-shadow duration-300 hover:shadow-xl hover:shadow-brand-600/30 sm:p-7">
       <div class="relative z-10 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:divide-x sm:divide-white/15">
         <div class="sm:pr-6">
           <div class="flex items-center gap-2 text-sm font-medium text-white/70">
             <Icon name="cart" :size="16" /> Total sales
           </div>
-          <div class="mt-1.5 text-3xl font-bold tracking-tight">{{ money(data.finance.total_sales) }}</div>
+          <div class="mt-1.5 text-3xl font-bold tracking-tight tabular-nums">{{ money(animSales) }}</div>
         </div>
         <div class="sm:px-6">
           <div class="flex items-center gap-2 text-sm font-medium text-white/70">
             <Icon name="trending" :size="16" /> Gross profit
           </div>
-          <div class="mt-1.5 text-3xl font-bold tracking-tight">{{ money(data.finance.total_profit) }}</div>
+          <div class="mt-1.5 text-3xl font-bold tracking-tight tabular-nums">{{ money(animProfit) }}</div>
         </div>
         <div class="sm:pl-6">
           <div class="flex items-center gap-2 text-sm font-medium text-white/70">
             <Icon name="wallet" :size="16" /> Profit margin
           </div>
-          <div class="mt-1.5 text-3xl font-bold tracking-tight">
-            {{ data.finance.total_sales > 0 ? profitMargin.toFixed(1) + '%' : '—' }}
+          <div class="mt-1.5 text-3xl font-bold tracking-tight tabular-nums">
+            {{ data.finance.total_sales > 0 ? animMargin.toFixed(1) + '%' : '—' }}
           </div>
         </div>
       </div>
@@ -149,8 +180,8 @@ onMounted(async () => {
             <div class="mt-1.5 flex items-center gap-2 pl-6">
               <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100/80 dark:bg-slate-700/60">
                 <div
-                  class="h-full rounded-full bg-brand-600 dark:bg-brand-500"
-                  :style="{ width: Math.max(2, (p.revenue / maxRevenue) * 100) + '%' }"
+                  class="h-full rounded-full bg-gradient-to-r from-brand-500 to-indigo-500 transition-[width] duration-700 ease-out"
+                  :style="{ width: (revealed ? Math.max(2, (p.revenue / maxRevenue) * 100) : 0) + '%', transitionDelay: i * 80 + 'ms' }"
                 />
               </div>
               <span class="shrink-0 text-xs text-slate-400">{{ p.quantity_sold }} sold</span>
@@ -211,3 +242,49 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Staggered entrance: each top-level block fades and slides up in sequence. */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dash-reveal > * {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dash-reveal > *:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.dash-reveal > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.dash-reveal > *:nth-child(3) {
+  animation-delay: 0.14s;
+}
+.dash-reveal > *:nth-child(4) {
+  animation-delay: 0.2s;
+}
+.dash-reveal > *:nth-child(5) {
+  animation-delay: 0.26s;
+}
+.dash-reveal > *:nth-child(6) {
+  animation-delay: 0.32s;
+}
+.dash-reveal > *:nth-child(7) {
+  animation-delay: 0.38s;
+}
+
+/* Accessibility: respect users who prefer less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .dash-reveal > * {
+    animation: none;
+  }
+}
+</style>
